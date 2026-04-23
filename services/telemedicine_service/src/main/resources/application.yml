@@ -1,0 +1,55 @@
+# Server Configuration
+server:
+  port: 8085
+
+# Spring Application Configuration
+spring:
+  application:
+    name: telemedicine-service
+  
+  # Database Configuration
+  datasource:
+    # allowPublicKeyRetrieval fixes: "Public Key Retrieval is not allowed" (common with MySQL 8 caching_sha2_password)
+    url: jdbc:mysql://localhost:3306/telemedicine_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update  # Auto-create tables
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+    show-sql: true
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+# Agora Configuration
+# Do not hardcode credentials in source control. Provide these via environment variables.
+agora:
+  app-id: ${AGORA_APP_ID:}
+  app-certificate: ${AGORA_APP_CERTIFICATE:}
+  token-expiration: ${AGORA_TOKEN_EXPIRATION:7200}
+
+# Logging
+logging:
+  level:
+    com.healthcare.telemedicine: DEBUG
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

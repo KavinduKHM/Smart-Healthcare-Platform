@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+.m2/
+
+# IDE
+.idea/
+*.iml
+.settings/
+.classpath
+.project
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker
+# Dockerfile  (do NOT ignore; required to build the image)
+docker-compose*.yml
+.dockerignore
+
+# Environment
+.env
+*.env
+
+# Application
+application-local.yml
+application-dev.yml
