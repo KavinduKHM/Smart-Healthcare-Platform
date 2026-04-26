@@ -3,7 +3,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/common/Layout';
 import HomePage from './pages/HomePage';
-import PatientDashboard from './pages/PatientDashboard';
 import VideoCallComponent from './components/telemedicine/VideoCall';
 import PatientShell from './pages/patient/PatientShell';
 import PatientRegister from './components/patient/PatientRegister';
@@ -31,6 +30,21 @@ const DoctorEntryRedirect = () => {
   return <Navigate to="/doctor/login" replace />;
 };
 
+const PatientEntryRedirect = () => {
+  const patientId = String(
+    localStorage.getItem('patientId') ||
+    localStorage.getItem('elixra.patientId') ||
+    localStorage.getItem('elixra.userId') ||
+    ''
+  ).trim();
+
+  if (patientId) {
+    return <Navigate to={`/patient/${encodeURIComponent(patientId)}/appointments`} replace />;
+  }
+
+  return <Navigate to="/patient/login" replace />;
+};
+
 function App() {
   return (
     <Router>
@@ -46,11 +60,7 @@ function App() {
 
           <Route path="/forbidden" element={<ForbiddenPage />} />
 
-          <Route path="/patient" element={(
-            <ProtectedRoute allowedRoles={["PATIENT", "ADMIN"]}>
-              <PatientDashboard />
-            </ProtectedRoute>
-          )} />
+          <Route path="/patient" element={<PatientEntryRedirect />} />
           <Route path="/patient/register" element={<PatientRegister />} />
           <Route
             path="/patient/:patientId"
