@@ -73,6 +73,15 @@ public class Appointment {
     @Column(name = "payment_status")
     private String paymentStatus;  // "pending", "succeeded", "failed"
 
+    @Column(name = "rating")
+    private Integer rating;
+
+    @Column(name = "review_text", length = 1000)
+    private String reviewText;
+
+    @Column(name = "review_created_at")
+    private LocalDateTime reviewCreatedAt;
+
     // Timestamps - automatically managed
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -100,5 +109,9 @@ public class Appointment {
     public boolean canBeRescheduled() {
         return (status == AppointmentStatus.PENDING || status == AppointmentStatus.CONFIRMED)
                 && LocalDateTime.now().plusHours(1).isBefore(appointmentTime);
+    }
+
+    public boolean canBeReviewed() {
+        return status == AppointmentStatus.COMPLETED;
     }
 }

@@ -36,6 +36,9 @@ public class AppointmentResponse {
     private String clientSecret;      // Stripe client secret for frontend
     private String paymentIntentId;
     private String paymentStatus;
+    private Integer rating;
+    private String reviewText;
+    private LocalDateTime reviewCreatedAt;
 
     // Helper method to check if appointment can be cancelled
     public boolean isCancellable() {

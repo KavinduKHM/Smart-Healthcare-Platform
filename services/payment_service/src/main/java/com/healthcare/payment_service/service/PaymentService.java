@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -45,23 +46,18 @@ public class PaymentService {
         log.info("Stripe initialized");
     }
     
-    /**
-     * Check if payment already exists for this appointment
-     * Returns true if payment already exists and is successful
-     */
-    private boolean isPaymentAlreadyProcessed(Long appointmentId) {
-        List<Transaction> existingTransactions = transactionRepository.findByAppointmentId(appointmentId);
-        
-        for (Transaction transaction : existingTransactions) {
-            // If there's a successful or pending transaction for this appointment
-            if (transaction.getStatus().equals(Transaction.TransactionStatus.SUCCEEDED.name()) ||
-                transaction.getStatus().equals(Transaction.TransactionStatus.PENDING.name())) {
-                log.warn("Duplicate payment attempt detected for appointment: {}. Existing transaction: {} with status: {}",
-                    appointmentId, transaction.getTransactionId(), transaction.getStatus());
-                return true;
-            }
-        }
-        return false;
+    private Transaction findLatestPendingTransaction(Long appointmentId) {
+        return transactionRepository.findByAppointmentId(appointmentId)
+                .stream()
+                .filter(transaction -> Transaction.TransactionStatus.PENDING.name().equals(transaction.getStatus()))
+                .max(Comparator.comparing(t -> t.getCreatedAt() == null ? LocalDateTime.MIN : t.getCreatedAt()))
+                .orElse(null);
+    }
+
+    private boolean hasSuccessfulPayment(Long appointmentId) {
+        return transactionRepository.findByAppointmentId(appointmentId)
+                .stream()
+                .anyMatch(transaction -> Transaction.TransactionStatus.SUCCEEDED.name().equals(transaction.getStatus()));
     }
     
 
@@ -69,10 +65,31 @@ public class PaymentService {
     public PaymentResponse createPaymentIntent(PaymentRequest request) {
         log.info("Creating payment intent for appointment: {}", request.getAppointmentId());
 
-        // CHECK FOR DUPLICATE PAYMENT
-        if (isPaymentAlreadyProcessed(request.getAppointmentId())) {
+        if (hasSuccessfulPayment(request.getAppointmentId())) {
             throw new RuntimeException("Payment already processed for appointment: " + request.getAppointmentId() +
-                    ". Duplicate payments are not allowed.");
+                ". Duplicate payments are not allowed.");
+        }
+
+        Transaction pendingTransaction = findLatestPendingTransaction(request.getAppointmentId());
+        if (pendingTransaction != null && pendingTransaction.getStripePaymentIntentId() != null
+            && !pendingTransaction.getStripePaymentIntentId().isBlank()) {
+            try {
+            PaymentIntent existingIntent = PaymentIntent.retrieve(pendingTransaction.getStripePaymentIntentId());
+            log.info("Reusing existing pending PaymentIntent {} for appointment {}",
+                existingIntent.getId(), request.getAppointmentId());
+
+            return new PaymentResponse(
+                existingIntent.getId(),
+                existingIntent.getClientSecret(),
+                pendingTransaction.getTransactionId(),
+                pendingTransaction.getStatus(),
+                pendingTransaction.getAmount(),
+                pendingTransaction.getCurrency()
+            );
+            } catch (StripeException e) {
+            log.warn("Unable to retrieve existing pending PaymentIntent {} for appointment {}. Creating a new intent.",
+                pendingTransaction.getStripePaymentIntentId(), request.getAppointmentId(), e);
+            }
         }
 
         try {

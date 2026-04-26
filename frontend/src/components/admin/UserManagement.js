@@ -132,6 +132,9 @@ const UserManagement = () => {
   const [appointments, setAppointments] = useState([]);
   const [selectedPatientProfile, setSelectedPatientProfile] = useState(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState('');
+  const [reviewAnalytics, setReviewAnalytics] = useState({ totalReviews: 0, overallAverageRating: 0, doctors: [] });
+  const [loadingReviewAnalytics, setLoadingReviewAnalytics] = useState(false);
+  const [reviewAnalyticsError, setReviewAnalyticsError] = useState('');
 
   const [modalState, setModalState] = useState({
     open: false,
@@ -229,9 +232,36 @@ const UserManagement = () => {
     }
   }, []);
 
+  const fetchReviewAnalytics = useCallback(async () => {
+    setLoadingReviewAnalytics(true);
+    setReviewAnalyticsError('');
+
+    try {
+      const headers = authHeaders();
+      const response = await getWithOptionalAuth(`${APPOINTMENT_BASE}/api/appointments/admin/reviews/analytics`, headers);
+      const payload = response?.data || {};
+      const doctors = Array.isArray(payload?.doctors) ? payload.doctors : [];
+
+      setReviewAnalytics({
+        totalReviews: Number(payload?.totalReviews || 0),
+        overallAverageRating: Number(payload?.overallAverageRating || 0),
+        doctors,
+      });
+    } catch (error) {
+      setReviewAnalytics({ totalReviews: 0, overallAverageRating: 0, doctors: [] });
+      setReviewAnalyticsError('Unable to load doctor review analytics.');
+    } finally {
+      setLoadingReviewAnalytics(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  useEffect(() => {
+    fetchReviewAnalytics();
+  }, [fetchReviewAnalytics]);
 
   useEffect(() => {
     if (!toast.open) {
@@ -353,6 +383,16 @@ const UserManagement = () => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
   }, [patients]);
+
+  const topRatedDoctors = useMemo(() => {
+    return [...(reviewAnalytics.doctors || [])]
+      .sort((a, b) => {
+        const avgDiff = Number(b?.averageRating || 0) - Number(a?.averageRating || 0);
+        if (avgDiff !== 0) return avgDiff;
+        return Number(b?.reviewCount || 0) - Number(a?.reviewCount || 0);
+      })
+      .slice(0, 8);
+  }, [reviewAnalytics]);
 
   const loadPatientDetails = async (patient) => {
     setSelectedPatient(patient);
@@ -720,8 +760,15 @@ const UserManagement = () => {
             Manage only patient accounts here, with live user-management stats and patient-vs-doctor comparisons.
           </p>
         </div>
-        <button className="um-refresh-btn" type="button" onClick={fetchUsers} disabled={loadingUsers}>
-          {loadingUsers ? 'Refreshing...' : 'Refresh Data'}
+        <button
+          className="um-refresh-btn"
+          type="button"
+          onClick={async () => {
+            await Promise.all([fetchUsers(), fetchReviewAnalytics()]);
+          }}
+          disabled={loadingUsers || loadingReviewAnalytics}
+        >
+          {loadingUsers || loadingReviewAnalytics ? 'Refreshing...' : 'Refresh Data'}
         </button>
       </header>
 
@@ -731,9 +778,45 @@ const UserManagement = () => {
         <SummaryCard label="Inactive Patients" value={summary.inactivePatients} tone="amber" />
         <SummaryCard label="Cities Covered" value={cityOptions.length} tone="violet" />
         <SummaryCard label="Patient Active Rate" value={`${summary.activeRate}%`} tone="blue" />
+        <SummaryCard label="Total Reviews" value={reviewAnalytics.totalReviews} tone="green" />
+        <SummaryCard label="Avg Doctor Rating" value={reviewAnalytics.overallAverageRating.toFixed(2)} tone="blue" />
+        <SummaryCard label="Rated Doctors" value={reviewAnalytics.doctors.length} tone="violet" />
       </section>
 
       {usersError && <div className="um-inline-alert">{usersError}</div>}
+      {reviewAnalyticsError && <div className="um-inline-alert">{reviewAnalyticsError}</div>}
+
+      <section className="um-chart-card" style={{ marginBottom: '18px' }}>
+        <h3>Doctor Review & Rating Analytics</h3>
+        {loadingReviewAnalytics ? (
+          <div className="um-loading">Loading doctor review analytics...</div>
+        ) : topRatedDoctors.length === 0 ? (
+          <div className="um-empty">No review analytics available yet.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="um-table" style={{ minWidth: 560 }}>
+              <thead>
+                <tr>
+                  <th>Doctor</th>
+                  <th>Specialty</th>
+                  <th>Average Rating</th>
+                  <th>Total Reviews</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topRatedDoctors.map((doctor) => (
+                  <tr key={doctor.doctorId}>
+                    <td>{doctor.doctorName || `Doctor ${doctor.doctorId}`}</td>
+                    <td>{doctor.doctorSpecialty || 'Unknown'}</td>
+                    <td>{Number(doctor.averageRating || 0).toFixed(2)} / 5</td>
+                    <td>{doctor.reviewCount || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <section className="um-toolbar um-toolbar-patient-only">
         <div className="um-form-field">

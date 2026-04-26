@@ -74,6 +74,27 @@ public class AppointmentController {
     }
 
     /**
+     * Submit a patient review/rating for a completed appointment
+     * POST /api/appointments/{id}/review
+     */
+    @PostMapping("/{id}/review")
+    public ResponseEntity<AppointmentResponse> submitAppointmentReview(
+            @PathVariable Long id,
+            @Valid @RequestBody AppointmentReviewRequest request) {
+
+        return ResponseEntity.ok(appointmentService.submitAppointmentReview(id, request));
+    }
+
+    /**
+     * Admin analytics endpoint for doctor review and rating performance
+     * GET /api/appointments/admin/reviews/analytics
+     */
+    @GetMapping("/admin/reviews/analytics")
+    public ResponseEntity<DoctorReviewAnalyticsResponse> getDoctorReviewAnalytics() {
+        return ResponseEntity.ok(appointmentService.getDoctorReviewAnalytics());
+    }
+
+    /**
      * Get available time slots for a doctor
      * GET /api/appointments/doctors/{doctorId}/slots?date=2024-01-15
      */

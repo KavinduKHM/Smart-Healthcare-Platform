@@ -15,8 +15,10 @@ import DoctorAppointmentsPage from './pages/doctor/DoctorAppointmentsPage';
 import DoctorPrescriptionsPage from './pages/doctor/DoctorPrescriptionsPage';
 import DoctorProfilePage from './pages/doctor/DoctorProfilePage';
 import DoctorRegistrationPage from './pages/doctor/DoctorRegistrationPage';
+import AdminShell from './pages/admin/AdminShell';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagement';
+import AdminReviewsPage from './pages/admin/AdminReviewsPage';
 import LoginPage from './pages/auth/LoginPage';
 import ForbiddenPage from './pages/auth/ForbiddenPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -93,16 +95,15 @@ function App() {
             <Route path="profile" element={<DoctorProfilePage />} />
           </Route>
 
-          <Route path="/admin" element={(
+          <Route path="/admin" element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
-              <AdminDashboard />
+              <AdminShell />
             </ProtectedRoute>
-          )} />
-          <Route path="/admin/user-management" element={(
-            <ProtectedRoute allowedRoles={["ADMIN"]}>
-              <UserManagementPage />
-            </ProtectedRoute>
-          )} />
+          }>
+            <Route index element={<AdminDashboard />} />
+            <Route path="user-management" element={<UserManagementPage />} />
+            <Route path="reviews" element={<AdminReviewsPage />} />
+          </Route>
 
           <Route path="/video-call/:channelName/:userAccount" element={<VideoCallComponent />} />
           <Route path="/" element={<HomePage />} />

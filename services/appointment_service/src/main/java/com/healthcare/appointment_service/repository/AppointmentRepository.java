@@ -125,6 +125,21 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("doctorId") Long doctorId,
             @Param("time") LocalDateTime time);
 
+    @Query("SELECT a.doctorId AS doctorId, COUNT(a) AS reviewCount, AVG(a.rating) AS averageRating " +
+            "FROM Appointment a WHERE a.rating IS NOT NULL GROUP BY a.doctorId ORDER BY AVG(a.rating) DESC")
+    List<DoctorReviewAnalyticsProjection> getDoctorReviewAnalytics();
+
+    @Query("SELECT a.rating AS rating, COUNT(a) AS count " +
+            "FROM Appointment a WHERE a.rating IS NOT NULL GROUP BY a.rating ORDER BY a.rating ASC")
+    List<ReviewRatingDistributionProjection> getReviewRatingDistribution();
+
+    @Query("SELECT YEAR(a.reviewCreatedAt) AS year, MONTH(a.reviewCreatedAt) AS month, " +
+            "COUNT(a) AS reviewCount, AVG(a.rating) AS averageRating " +
+            "FROM Appointment a WHERE a.rating IS NOT NULL AND a.reviewCreatedAt IS NOT NULL " +
+            "GROUP BY YEAR(a.reviewCreatedAt), MONTH(a.reviewCreatedAt) " +
+            "ORDER BY YEAR(a.reviewCreatedAt), MONTH(a.reviewCreatedAt)")
+    List<ReviewMonthlyTrendProjection> getReviewMonthlyTrend();
+
     // ========== Update Queries ==========
 
     /**

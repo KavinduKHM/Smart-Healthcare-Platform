@@ -82,6 +82,12 @@ public class SecurityConfig {
                         .hasAnyRole("PATIENT", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/appointments/*/confirm-payment")
                         .hasAnyRole("PATIENT", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/appointments/*/review")
+                        .hasAnyRole("PATIENT", "ADMIN")
+
+                        // Admin analytics
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/admin/reviews/analytics")
+                        .hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )

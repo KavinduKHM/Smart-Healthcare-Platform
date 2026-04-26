@@ -1,0 +1,18 @@
+.admin-shell {
+  align-items: stretch;
+}
+
+.admin-sidebar {
+  min-height: calc(100vh - 170px);
+}
+
+.admin-shell-content {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (max-width: 920px) {
+  .admin-sidebar {
+    min-height: auto;
+  }
+}

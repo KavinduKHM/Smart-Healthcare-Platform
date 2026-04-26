@@ -19,8 +19,17 @@ export const bookAppointment = (appointmentData) =>
 export const getUpcomingAppointmentsForPatient = (patientId) =>
   APPOINTMENT_API.get(`/patient/${patientId}/upcoming`);
 
+export const getAppointmentsForPatient = (patientId, page = 0, size = 50) =>
+  APPOINTMENT_API.get(`/patient/${patientId}?page=${page}&size=${size}`);
+
 export const createPaymentIntentForAppointment = (appointmentId) =>
   APPOINTMENT_API.post(`/${appointmentId}/payment-intent`);
+
+export const submitAppointmentReview = (appointmentId, reviewData) =>
+  APPOINTMENT_API.post(`/${appointmentId}/review`, reviewData);
+
+export const getDoctorReviewAnalytics = () =>
+  APPOINTMENT_API.get('/admin/reviews/analytics');
 
 // ========== Doctor-facing functions ==========
 export const getDoctorAppointments = (doctorId, page = 0, size = 20) => 

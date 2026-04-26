@@ -7,6 +7,9 @@ import com.healthcare.appointment_service.dto.*;
 import com.healthcare.appointment_service.model.Appointment;
 import com.healthcare.appointment_service.model.AppointmentStatus;
 import com.healthcare.appointment_service.repository.AppointmentRepository;
+import com.healthcare.appointment_service.repository.DoctorReviewAnalyticsProjection;
+import com.healthcare.appointment_service.repository.ReviewMonthlyTrendProjection;
+import com.healthcare.appointment_service.repository.ReviewRatingDistributionProjection;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -440,6 +444,119 @@ public class AppointmentService {
         }
 
         return createOrUpdatePaymentIntent(appointment, patient, doctor);
+    }
+
+    @Transactional
+    public AppointmentResponse submitAppointmentReview(Long appointmentId, AppointmentReviewRequest request) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found: " + appointmentId));
+
+        if (!Objects.equals(appointment.getPatientId(), request.getPatientId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only review your own appointments");
+        }
+
+        if (!appointment.canBeReviewed()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reviews are only allowed for completed appointments");
+        }
+
+        if (appointment.getRating() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Review already submitted for this appointment");
+        }
+
+        appointment.setRating(request.getRating());
+        appointment.setReviewText(request.getReviewText() == null ? null : request.getReviewText().trim());
+        appointment.setReviewCreatedAt(LocalDateTime.now());
+
+        Appointment saved = appointmentRepository.save(appointment);
+
+        PatientDTO patient = new PatientDTO();
+        patient.setId(saved.getPatientId());
+        patient.setFirstName("Patient");
+        patient.setLastName(String.valueOf(saved.getPatientId()));
+
+        DoctorDTO doctor = new DoctorDTO();
+        doctor.setId(saved.getDoctorId());
+        doctor.setFirstName("Dr.");
+        doctor.setLastName(String.valueOf(saved.getDoctorId()));
+        doctor.setSpecialty("General Medicine");
+
+        return buildResponse(saved, patient, doctor);
+    }
+
+    public DoctorReviewAnalyticsResponse getDoctorReviewAnalytics() {
+        List<DoctorReviewAnalyticsProjection> aggregated = appointmentRepository.getDoctorReviewAnalytics();
+        List<ReviewRatingDistributionProjection> ratingDistributionData = appointmentRepository.getReviewRatingDistribution();
+        List<ReviewMonthlyTrendProjection> monthlyTrendData = appointmentRepository.getReviewMonthlyTrend();
+
+        List<DoctorReviewAnalyticsResponse.DoctorReviewMetric> doctorMetrics = aggregated.stream()
+                .map(metric -> {
+                    DoctorDTO doctor;
+                    try {
+                        doctor = doctorServiceClient.getDoctorById(metric.getDoctorId());
+                    } catch (Exception e) {
+                        doctor = new DoctorDTO();
+                        doctor.setId(metric.getDoctorId());
+                        doctor.setFirstName("Dr.");
+                        doctor.setLastName(String.valueOf(metric.getDoctorId()));
+                        doctor.setSpecialty("Unknown");
+                    }
+
+                    double avgRating = metric.getAverageRating() == null
+                            ? 0.0
+                            : Math.round(metric.getAverageRating() * 100.0) / 100.0;
+
+                    return DoctorReviewAnalyticsResponse.DoctorReviewMetric.builder()
+                            .doctorId(metric.getDoctorId())
+                            .doctorName(doctor.getFullName())
+                            .doctorSpecialty(doctor.getSpecialty())
+                            .reviewCount(metric.getReviewCount() == null ? 0L : metric.getReviewCount())
+                            .averageRating(avgRating)
+                            .build();
+                })
+                .toList();
+
+        long totalReviews = doctorMetrics.stream().mapToLong(DoctorReviewAnalyticsResponse.DoctorReviewMetric::getReviewCount).sum();
+        double weightedRatingSum = doctorMetrics.stream()
+                .mapToDouble(metric -> metric.getAverageRating() * metric.getReviewCount())
+                .sum();
+        double overallAverage = totalReviews == 0
+                ? 0.0
+                : Math.round((weightedRatingSum / totalReviews) * 100.0) / 100.0;
+
+        List<DoctorReviewAnalyticsResponse.RatingDistributionItem> ratingDistribution = ratingDistributionData.stream()
+            .map(item -> DoctorReviewAnalyticsResponse.RatingDistributionItem.builder()
+                .rating(item.getRating() == null ? 0 : item.getRating())
+                .count(item.getCount() == null ? 0L : item.getCount())
+                .build())
+            .toList();
+
+        List<DoctorReviewAnalyticsResponse.MonthlyReviewTrendItem> monthlyTrend = monthlyTrendData.stream()
+            .map(item -> {
+                int year = item.getYear() == null ? 0 : item.getYear();
+                int month = item.getMonth() == null ? 1 : item.getMonth();
+                String label = (year > 0)
+                    ? YearMonth.of(year, month).format(DateTimeFormatter.ofPattern("MMM yyyy"))
+                    : "Unknown";
+
+                double avg = item.getAverageRating() == null
+                    ? 0.0
+                    : Math.round(item.getAverageRating() * 100.0) / 100.0;
+
+                return DoctorReviewAnalyticsResponse.MonthlyReviewTrendItem.builder()
+                    .month(label)
+                    .reviewCount(item.getReviewCount() == null ? 0L : item.getReviewCount())
+                    .averageRating(avg)
+                    .build();
+            })
+            .toList();
+
+        return DoctorReviewAnalyticsResponse.builder()
+                .totalReviews(totalReviews)
+                .overallAverageRating(overallAverage)
+                .doctors(doctorMetrics)
+            .ratingDistribution(ratingDistribution)
+            .monthlyTrend(monthlyTrend)
+                .build();
     }
 
     private void sendAppointmentNotification(Appointment appointment, PatientDTO patient, DoctorDTO doctor, String eventType) {
@@ -882,6 +999,9 @@ public class AppointmentService {
                 .prescriptionIssued(appointment.isPrescriptionIssued())
                 .paymentIntentId(appointment.getPaymentIntentId())
                 .paymentStatus(appointment.getPaymentStatus())
+                .rating(appointment.getRating())
+                .reviewText(appointment.getReviewText())
+                .reviewCreatedAt(appointment.getReviewCreatedAt())
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt());
 

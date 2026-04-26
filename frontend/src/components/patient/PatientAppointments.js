@@ -1,6 +1,10 @@
 // src/components/patient/PatientAppointments.js
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPaymentIntentForAppointment, getUpcomingAppointmentsForPatient } from '../../services/appointmentService';
+import {
+  createPaymentIntentForAppointment,
+  getAppointmentsForPatient,
+  submitAppointmentReview
+} from '../../services/appointmentService';
 import { getDoctorProfile } from '../../services/doctorService';
 import { getSessionsByAppointment } from '../../services/telemedicineService';
 import StripePayment from '../common/StripePayment';
@@ -21,6 +25,8 @@ const PatientAppointments = ({ patientId }) => {
   const [openReviewAppointmentId, setOpenReviewAppointmentId] = useState(null);
   const [reviewDraftByAppointmentId, setReviewDraftByAppointmentId] = useState({});
   const [submittedReviewByAppointmentId, setSubmittedReviewByAppointmentId] = useState({});
+  const [reviewSubmittingAppointmentId, setReviewSubmittingAppointmentId] = useState(null);
+  const [reviewError, setReviewError] = useState('');
   const [payTarget, setPayTarget] = useState(null);
   const [payClientSecret, setPayClientSecret] = useState('');
   const [payLoading, setPayLoading] = useState(false);
@@ -38,9 +44,11 @@ const PatientAppointments = ({ patientId }) => {
       setLoading(true);
       setError(null);
       try {
-        const res = await getUpcomingAppointmentsForPatient(patientId);
+        const res = await getAppointmentsForPatient(patientId, 0, 50);
         if (!isMounted) return;
-        setAppointments(Array.isArray(res.data) ? res.data : []);
+        const payload = res?.data;
+        const list = Array.isArray(payload) ? payload : (Array.isArray(payload?.content) ? payload.content : []);
+        setAppointments(list);
       } catch (err) {
         console.error(err);
         if (!isMounted) return;
@@ -59,8 +67,10 @@ const PatientAppointments = ({ patientId }) => {
   const refreshAppointments = async () => {
     if (!patientId) return;
     try {
-      const res = await getUpcomingAppointmentsForPatient(patientId);
-      setAppointments(Array.isArray(res.data) ? res.data : []);
+      const res = await getAppointmentsForPatient(patientId, 0, 50);
+      const payload = res?.data;
+      const list = Array.isArray(payload) ? payload : (Array.isArray(payload?.content) ? payload.content : []);
+      setAppointments(list);
     } catch (err) {
       console.error(err);
     }
@@ -203,6 +213,8 @@ const PatientAppointments = ({ patientId }) => {
     );
     if (confirmedAppointments.length === 0) return;
 
+    const activeSubscriptions = subscriptionsRef.current;
+
     const client = new StompClient({
       webSocketFactory: () => new SockJS(wsUrl),
       reconnectDelay: 1500,
@@ -213,7 +225,7 @@ const PatientAppointments = ({ patientId }) => {
         confirmedAppointments.forEach((apt) => {
           const channelName = `appointment_${apt.id}`;
           const topic = `/topic/video.session.${channelName}`;
-          if (subscriptionsRef.current.has(topic)) return;
+          if (activeSubscriptions.has(topic)) return;
 
           const sub = client.subscribe(topic, (frame) => {
             try {
@@ -240,7 +252,7 @@ const PatientAppointments = ({ patientId }) => {
             }
           });
 
-          subscriptionsRef.current.set(topic, sub);
+          activeSubscriptions.set(topic, sub);
         });
       },
     });
@@ -250,14 +262,14 @@ const PatientAppointments = ({ patientId }) => {
 
     return () => {
       try {
-        subscriptionsRef.current.forEach((sub) => {
+        activeSubscriptions.forEach((sub) => {
           try {
             sub?.unsubscribe?.();
           } catch {
             // ignore
           }
         });
-        subscriptionsRef.current.clear();
+        activeSubscriptions.clear();
       } catch {
         // ignore
       }
@@ -271,17 +283,20 @@ const PatientAppointments = ({ patientId }) => {
     };
   }, [appointments, doctorNameById]);
 
-  const { pending, confirmed, other } = useMemo(() => {
+  const { pending, confirmed, completed, other } = useMemo(() => {
     const list = Array.isArray(appointments) ? appointments : [];
 
     const pendingList = [];
     const confirmedList = [];
+    const completedList = [];
     const otherList = [];
 
     for (const apt of list) {
       const status = String(apt.status).toUpperCase();
       if (status === 'CONFIRMED') {
         confirmedList.push(apt);
+      } else if (status === 'COMPLETED') {
+        completedList.push(apt);
       } else if (status === 'PENDING' || status === 'PENDING_PAYMENT' || status === 'RESCHEDULED') {
         pendingList.push(apt);
       } else {
@@ -292,6 +307,7 @@ const PatientAppointments = ({ patientId }) => {
     return {
       pending: pendingList,
       confirmed: confirmedList,
+      completed: completedList,
       other: otherList,
     };
   }, [appointments]);
@@ -317,7 +333,14 @@ const PatientAppointments = ({ patientId }) => {
     const sessionActive = Number.isFinite(apptId) ? Boolean(sessionActiveByAppointmentId?.[apptId]) : false;
     const joinDisabled = category === 'confirmed' ? !sessionActive : false;
 
-    const submitted = Number.isFinite(apptId) ? submittedReviewByAppointmentId?.[apptId] : null;
+    const existingSubmitted = Number.isFinite(apptId) && Number.isFinite(Number(apt?.rating))
+      ? {
+          rating: Number(apt.rating),
+          review: String(apt?.reviewText || ''),
+          createdAt: apt?.reviewCreatedAt || null,
+        }
+      : null;
+    const submitted = Number.isFinite(apptId) ? (existingSubmitted || submittedReviewByAppointmentId?.[apptId]) : null;
     const draft = Number.isFinite(apptId)
       ? (reviewDraftByAppointmentId?.[apptId] ?? { rating: 0, review: '' })
       : { rating: 0, review: '' };
@@ -336,7 +359,7 @@ const PatientAppointments = ({ patientId }) => {
       }));
     };
 
-    const submitReview = () => {
+    const submitReview = async () => {
       if (!Number.isFinite(apptId)) return;
       const rating = Number(draft?.rating ?? 0);
       if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
@@ -344,19 +367,50 @@ const PatientAppointments = ({ patientId }) => {
         return;
       }
 
-      setSubmittedReviewByAppointmentId((prev) => ({
-        ...prev,
-        [apptId]: {
+      setReviewError('');
+      setReviewSubmittingAppointmentId(apptId);
+
+      try {
+        const payload = {
+          patientId: Number(patientId),
           rating,
-          review: String(draft?.review ?? '').trim(),
-          createdAt: new Date().toISOString(),
-        },
-      }));
-      setOpenReviewAppointmentId(null);
-      setSessionAlert({
-        appointmentId: apt.id,
-        message: 'Review submitted (demo only).',
-      });
+          reviewText: String(draft?.review ?? '').trim(),
+        };
+
+        const response = await submitAppointmentReview(apptId, payload);
+        const updated = response?.data || {};
+
+        setAppointments((prev) => prev.map((item) => (
+          Number(item?.id) === apptId
+            ? {
+                ...item,
+                rating: updated?.rating ?? rating,
+                reviewText: updated?.reviewText ?? payload.reviewText,
+                reviewCreatedAt: updated?.reviewCreatedAt ?? new Date().toISOString(),
+              }
+            : item
+        )));
+
+        setSubmittedReviewByAppointmentId((prev) => ({
+          ...prev,
+          [apptId]: {
+            rating: updated?.rating ?? rating,
+            review: updated?.reviewText ?? payload.reviewText,
+            createdAt: updated?.reviewCreatedAt ?? new Date().toISOString(),
+          },
+        }));
+
+        setOpenReviewAppointmentId(null);
+        setSessionAlert({
+          appointmentId: apt.id,
+          message: 'Review submitted successfully.',
+        });
+      } catch (err) {
+        const message = err?.response?.data?.message || err?.response?.data?.error || 'Failed to submit review';
+        setReviewError(message);
+      } finally {
+        setReviewSubmittingAppointmentId(null);
+      }
     };
 
     return (
@@ -374,11 +428,17 @@ const PatientAppointments = ({ patientId }) => {
               <button type="button" className="apt-join-btn" onClick={() => joinVideo(apt)} disabled={joinDisabled}>
                 {joinDisabled ? 'Waiting for doctor' : 'Join Video Session'}
               </button>
-
+            </div>
+          ) : null}
+          {category === 'completed' ? (
+            <div className="apt-action-stack">
               <button
                 type="button"
                 className="apt-review-btn"
-                onClick={() => setOpenReviewAppointmentId(isReviewOpen ? null : apptId)}
+                onClick={() => {
+                  setReviewError('');
+                  setOpenReviewAppointmentId(isReviewOpen ? null : apptId);
+                }}
                 disabled={Boolean(submitted)}
               >
                 {submitted ? 'Review submitted' : (isReviewOpen ? 'Close review' : 'Leave a review')}
@@ -399,11 +459,11 @@ const PatientAppointments = ({ patientId }) => {
           ) : null}
         </div>
 
-        {category === 'confirmed' && isReviewOpen && !submitted ? (
+        {category === 'completed' && isReviewOpen && !submitted ? (
           <div className="apt-review" aria-label="Submit review">
             <div className="apt-review-head">
               <strong>Rate your consultation</strong>
-              <span className="apt-review-hint">Demo only (not saved to backend)</span>
+              <span className="apt-review-hint">Saved to your appointment history</span>
             </div>
 
             <div className="apt-review-stars" role="radiogroup" aria-label="Rating">
@@ -431,13 +491,15 @@ const PatientAppointments = ({ patientId }) => {
             />
 
             <div className="apt-review-actions">
-              <button type="button" onClick={submitReview}>
-                Submit review
+              <button type="button" onClick={submitReview} disabled={reviewSubmittingAppointmentId === apptId}>
+                {reviewSubmittingAppointmentId === apptId ? 'Submitting...' : 'Submit review'}
               </button>
               <button type="button" className="apt-review-secondary" onClick={() => setOpenReviewAppointmentId(null)}>
                 Cancel
               </button>
             </div>
+
+            {reviewError ? <p className="appointments-error">{reviewError}</p> : null}
           </div>
         ) : null}
       </article>
@@ -456,6 +518,10 @@ const PatientAppointments = ({ patientId }) => {
 
       {payError ? (
         <p className="appointments-error">{payError}</p>
+      ) : null}
+
+      {reviewError && !openReviewAppointmentId ? (
+        <p className="appointments-error">{reviewError}</p>
       ) : null}
 
       {payTarget && payClientSecret ? (
@@ -501,8 +567,8 @@ const PatientAppointments = ({ patientId }) => {
         <p className="appointments-empty">No upcoming appointments.</p>
       )}
 
-      {!loading && !error && appointments.length > 0 && pending.length === 0 && confirmed.length === 0 && (
-        <p className="appointments-empty">No pending/confirmed upcoming appointments.</p>
+      {!loading && !error && appointments.length > 0 && pending.length === 0 && confirmed.length === 0 && completed.length === 0 && (
+        <p className="appointments-empty">No pending, confirmed, or completed appointments.</p>
       )}
 
       {pending.length > 0 && (
@@ -519,6 +585,15 @@ const PatientAppointments = ({ patientId }) => {
           <h3 className="appointments-group-title appointments-group-title-confirmed">Confirmed</h3>
           <div className="appointments-stack">
             {confirmed.map((apt) => renderAppointmentCard(apt, 'confirmed'))}
+          </div>
+        </div>
+      )}
+
+      {completed.length > 0 && (
+        <div className="appointments-group">
+          <h3 className="appointments-group-title appointments-group-title-other">Completed</h3>
+          <div className="appointments-stack">
+            {completed.map((apt) => renderAppointmentCard(apt, 'completed'))}
           </div>
         </div>
       )}
