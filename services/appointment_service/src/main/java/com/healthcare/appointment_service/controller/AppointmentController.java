@@ -64,6 +64,16 @@ public class AppointmentController {
     }
 
     /**
+     * Create/re-issue payment intent for an existing pending-payment appointment
+     * POST /api/appointments/{id}/payment-intent
+     */
+    @PostMapping("/{id}/payment-intent")
+    public ResponseEntity<AppointmentResponse> createPaymentIntentForAppointment(@PathVariable Long id) {
+        AppointmentResponse response = appointmentService.createPaymentIntentForAppointment(id);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Get available time slots for a doctor
      * GET /api/appointments/doctors/{doctorId}/slots?date=2024-01-15
      */

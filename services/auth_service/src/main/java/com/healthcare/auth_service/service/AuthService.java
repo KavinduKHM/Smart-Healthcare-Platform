@@ -1,6 +1,8 @@
 package com.healthcare.auth_service.service;
 
 import com.healthcare.auth_service.dto.*;
+import com.healthcare.auth_service.client.PatientServiceClient;
+import com.healthcare.auth_service.client.DoctorServiceClient;
 import com.healthcare.auth_service.model.Role;
 import com.healthcare.auth_service.model.User;
 import com.healthcare.auth_service.repository.RoleRepository;
@@ -44,19 +46,25 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final PatientServiceClient patientServiceClient;
+    private final DoctorServiceClient doctorServiceClient;
 
     public AuthService(AuthenticationManager authenticationManager,
                        UserRepository userRepository,
                        RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       RedisTemplate<String, Object> redisTemplate) {
+                       RedisTemplate<String, Object> redisTemplate,
+                       PatientServiceClient patientServiceClient,
+                       DoctorServiceClient doctorServiceClient) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.redisTemplate = redisTemplate;
+        this.patientServiceClient = patientServiceClient;
+        this.doctorServiceClient = doctorServiceClient;
     }
 
     /**
@@ -156,6 +164,40 @@ public class AuthService {
         // Save the user to the database
         User savedUser = userRepository.save(user);
         log.info("New user registered: {}", savedUser.getUsername());
+
+        // Propagate registration to respective microservice
+        try {
+            log.info("Starting profile propagation for user: {} (Role: {})", savedUser.getUsername(), roleName);
+            if ("ROLE_PATIENT".equals(roleName)) {
+                PatientRegistrationRequest patientReq = PatientRegistrationRequest.builder()
+                        .userId(savedUser.getId())
+                        .firstName(request.getFirstName())
+                        .lastName(request.getLastName())
+                        .email(request.getEmail())
+                        .phoneNumber(request.getPhoneNumber())
+                        .build();
+                log.debug("Sending patient registration request: {}", patientReq);
+                patientServiceClient.registerPatient(patientReq);
+                log.info("Successfully propagated patient registration to patient-service for user ID: {}", savedUser.getId());
+            } else if ("ROLE_DOCTOR".equals(roleName)) {
+                DoctorRegistrationRequest doctorReq = DoctorRegistrationRequest.builder()
+                        .userId(savedUser.getId())
+                        .firstName(request.getFirstName())
+                        .lastName(request.getLastName())
+                        .email(request.getEmail())
+                        .phoneNumber(request.getPhoneNumber())
+                        .specialty(request.getSpecialty() != null && !request.getSpecialty().isBlank() 
+                                ? request.getSpecialty() : "General Practice")
+                        .build();
+                log.debug("Sending doctor registration request: {}", doctorReq);
+                doctorServiceClient.registerDoctor(doctorReq);
+                log.info("Successfully propagated doctor registration to doctor-service for user ID: {}", savedUser.getId());
+            }
+        } catch (Exception e) {
+            log.error("CRITICAL: Failed to propagate profile creation for user ID: {}. Error: {}", savedUser.getId(), e.getMessage(), e);
+            // We throw a more descriptive error to help the frontend/user understand what failed
+            throw new RuntimeException("Auth account created, but profile synchronization failed. Error: " + e.getMessage());
+        }
 
         // Auto-login: generate token for the new user
         String accessToken = jwtService.generateTokenFromUser(savedUser);

@@ -19,6 +19,9 @@ export const bookAppointment = (appointmentData) =>
 export const getUpcomingAppointmentsForPatient = (patientId) =>
   APPOINTMENT_API.get(`/patient/${patientId}/upcoming`);
 
+export const createPaymentIntentForAppointment = (appointmentId) =>
+  APPOINTMENT_API.post(`/${appointmentId}/payment-intent`);
+
 // ========== Doctor-facing functions ==========
 export const getDoctorAppointments = (doctorId, page = 0, size = 20) => 
   APPOINTMENT_API.get(`/doctor/${doctorId}?page=${page}&size=${size}`);

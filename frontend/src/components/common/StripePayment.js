@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import axios from 'axios';
+import { APPOINTMENT_API } from '../../services/api';
 
 const stripePublicKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
@@ -39,7 +39,8 @@ const PaymentForm = ({ appointmentId, amount, clientSecret, onSuccess, onError }
       if (result.paymentIntent.status === 'succeeded') {
         // Confirm payment with your backend
         try {
-          await axios.post(`http://localhost:8084/api/appointments/${appointmentId}/confirm-payment`, {
+          // Using APPOINTMENT_API ensures the Authorization header is sent
+          await APPOINTMENT_API.post(`/${appointmentId}/confirm-payment`, {
             paymentIntentId: result.paymentIntent.id,
             transactionId: result.paymentIntent.id
           });

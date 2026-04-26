@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { clearAuthSession, isLoggedIn } from '../../services/authService';
 
 const getStoredUser = () => ({
   userName: localStorage.getItem('elixra.userName') || '',
@@ -37,6 +38,8 @@ const Layout = ({ children }) => {
   const containerClassName = isPortalShellRoute ? 'portalContainer' : 'container';
 
   const [user, setUser] = useState(getStoredUser);
+
+  const loggedIn = useMemo(() => isLoggedIn(), [user]);
 
   const headerLabel = useMemo(() => {
     const name = String(user.userName || '').trim() || 'Guest';
@@ -108,6 +111,23 @@ const Layout = ({ children }) => {
               </span>
               <span className="appUserChipName">{headerLabel}</span>
             </button>
+
+            {loggedIn ? (
+              <button
+                type="button"
+                className="appUserChip appUserChipLink"
+                onClick={() => {
+                  clearAuthSession();
+                  setUser(getStoredUser());
+                  navigate('/', { replace: true });
+                }}
+                aria-label="Logout"
+                title="Logout"
+                style={{ marginLeft: '0.6rem' }}
+              >
+                Logout
+              </button>
+            ) : null}
           </div>
         </div>
       </header>

@@ -4,7 +4,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Layout from './components/common/Layout';
 import HomePage from './pages/HomePage';
 import PatientDashboard from './pages/PatientDashboard';
-import DoctorDashboard from './pages/DoctorDashboard';
 import VideoCallComponent from './components/telemedicine/VideoCall';
 import PatientShell from './pages/patient/PatientShell';
 import PatientRegister from './components/patient/PatientRegister';
@@ -19,15 +18,48 @@ import DoctorProfilePage from './pages/doctor/DoctorProfilePage';
 import DoctorRegistrationPage from './pages/doctor/DoctorRegistrationPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagement';
+import LoginPage from './pages/auth/LoginPage';
+import ForbiddenPage from './pages/auth/ForbiddenPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import RegisterPage from './pages/auth/RegisterPage';
+
+const DoctorEntryRedirect = () => {
+  const doctorId = String(localStorage.getItem('doctorId') || localStorage.getItem('elixra.doctorId') || '').trim();
+  if (doctorId) {
+    return <Navigate to={`/doctor/${encodeURIComponent(doctorId)}/appointments`} replace />;
+  }
+  return <Navigate to="/doctor/login" replace />;
+};
 
 function App() {
   return (
     <Router>
       <Layout>
         <Routes>
-          <Route path="/patient" element={<PatientDashboard />} />
+          <Route path="/patient/login" element={<LoginPage portal="patient" />} />
+          <Route path="/doctor/login" element={<LoginPage portal="doctor" />} />
+          <Route path="/admin/login" element={<LoginPage portal="admin" />} />
+
+          <Route path="/patient/signup" element={<RegisterPage portal="patient" />} />
+          <Route path="/doctor/signup" element={<RegisterPage portal="doctor" />} />
+          <Route path="/admin/signup" element={<RegisterPage portal="admin" />} />
+
+          <Route path="/forbidden" element={<ForbiddenPage />} />
+
+          <Route path="/patient" element={(
+            <ProtectedRoute allowedRoles={["PATIENT", "ADMIN"]}>
+              <PatientDashboard />
+            </ProtectedRoute>
+          )} />
           <Route path="/patient/register" element={<PatientRegister />} />
-          <Route path="/patient/:patientId" element={<PatientShell />}>
+          <Route
+            path="/patient/:patientId"
+            element={(
+              <ProtectedRoute allowedRoles={["PATIENT", "ADMIN"]}>
+                <PatientShell />
+              </ProtectedRoute>
+            )}
+          >
             <Route index element={<Navigate to="appointments" replace />} />
             <Route path="appointments" element={<PatientAppointmentsBookPage />} />
             <Route path="prescriptions" element={<PatientPrescriptionsPage />} />
@@ -35,17 +67,32 @@ function App() {
             <Route path="profile" element={<PatientProfilePage />} />
           </Route>
 
-          <Route path="/doctor" element={<DoctorDashboard />} />
+          <Route path="/doctor" element={<DoctorEntryRedirect />} />
           <Route path="/doctor/register" element={<DoctorRegistrationPage />} />
-          <Route path="/doctor/:doctorId" element={<DoctorShell />}>
+          <Route
+            path="/doctor/:doctorId"
+            element={(
+              <ProtectedRoute allowedRoles={["DOCTOR", "ADMIN"]}>
+                <DoctorShell />
+              </ProtectedRoute>
+            )}
+          >
             <Route index element={<Navigate to="appointments" replace />} />
             <Route path="appointments" element={<DoctorAppointmentsPage />} />
             <Route path="prescriptions" element={<DoctorPrescriptionsPage />} />
             <Route path="profile" element={<DoctorProfilePage />} />
           </Route>
 
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/user-management" element={<UserManagementPage />} />
+          <Route path="/admin" element={(
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          )} />
+          <Route path="/admin/user-management" element={(
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <UserManagementPage />
+            </ProtectedRoute>
+          )} />
 
           <Route path="/video-call/:channelName/:userAccount" element={<VideoCallComponent />} />
           <Route path="/" element={<HomePage />} />

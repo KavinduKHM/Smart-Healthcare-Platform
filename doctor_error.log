@@ -1,0 +1,79 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.1.5)
+
+2026-04-25T19:14:05.645Z  INFO 1 --- [           main] c.h.d.DoctorServiceApplication           : Starting DoctorServiceApplication v0.0.1-SNAPSHOT using Java 17.0.18 with PID 1 (/app/app.jar started by root in /app)
+2026-04-25T19:14:05.651Z DEBUG 1 --- [           main] c.h.d.DoctorServiceApplication           : Running with Spring Boot v3.1.5, Spring v6.0.13
+2026-04-25T19:14:05.655Z  INFO 1 --- [           main] c.h.d.DoctorServiceApplication           : The following 1 profile is active: "docker"
+2026-04-25T19:14:11.869Z  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-25T19:14:12.673Z  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 763 ms. Found 3 JPA repository interfaces.
+2026-04-25T19:14:13.931Z  INFO 1 --- [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=3610c07a-4b06-366b-a97f-00e0126cffd5
+2026-04-25T19:14:14.578Z  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'com.healthcare.doctor_service.client.PatientServiceClient' of type [org.springframework.cloud.openfeign.FeignClientFactoryBean] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2026-04-25T19:14:14.585Z  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'com.healthcare.doctor_service.client.TelemedicineServiceClient' of type [org.springframework.cloud.openfeign.FeignClientFactoryBean] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2026-04-25T19:14:16.940Z  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8083 (http)
+2026-04-25T19:14:16.991Z  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-25T19:14:16.992Z  INFO 1 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.15]
+2026-04-25T19:14:17.258Z  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-25T19:14:17.274Z  INFO 1 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 11221 ms
+2026-04-25T19:14:20.206Z DEBUG 1 --- [           main] c.h.d.s.AuthServiceAuthenticationFilter  : Filter 'authServiceAuthenticationFilter' configured for use
+2026-04-25T19:14:20.739Z  INFO 1 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-25T19:14:21.883Z  INFO 1 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@7baf6acf
+2026-04-25T19:14:21.901Z  INFO 1 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-25T19:14:22.136Z  INFO 1 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-25T19:14:22.800Z  INFO 1 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.2.13.Final
+2026-04-25T19:14:22.824Z  INFO 1 --- [           main] org.hibernate.cfg.Environment            : HHH000406: Using bytecode reflection optimizer
+2026-04-25T19:14:25.242Z  INFO 1 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-25T19:14:29.831Z  INFO 1 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-25T19:14:29.837Z  INFO 1 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-25T19:14:30.982Z  INFO 1 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-25T19:14:37.657Z  WARN 1 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-25T19:14:38.093Z  INFO 1 --- [           main] o.s.c.openfeign.FeignClientFactoryBean   : For 'patient-service' URL not provided. Will try picking an instance via load-balancing.
+2026-04-25T19:14:38.648Z  INFO 1 --- [           main] o.s.c.openfeign.FeignClientFactoryBean   : For 'telemedicine-service' URL not provided. Will try picking an instance via load-balancing.
+2026-04-25T19:14:38.848Z  WARN 1 --- [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: baa9a18d-b03f-46aa-9b1c-b81ef144573e
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-04-25T19:14:40.861Z  INFO 1 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoint(s) beneath base path '/actuator'
+2026-04-25T19:14:41.054Z  INFO 1 --- [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@2ac7c683, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@407ff25f, org.springframework.security.web.context.SecurityContextHolderFilter@60cbba57, org.springframework.security.web.header.HeaderWriterFilter@15ab0461, org.springframework.web.filter.CorsFilter@3ba8fbc8, org.springframework.security.web.authentication.logout.LogoutFilter@3e242137, com.healthcare.doctor_service.security.AuthServiceAuthenticationFilter@4a699efa, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@3be2ef56, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@672549f3, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@113a89c5, org.springframework.security.web.session.SessionManagementFilter@4e451f9a, org.springframework.security.web.access.ExceptionTranslationFilter@430dbcb0, org.springframework.security.web.access.intercept.AuthorizationFilter@40dcbf7]
+2026-04-25T19:14:43.806Z  INFO 1 --- [           main] DiscoveryClientOptionalArgsConfiguration : Eureka HTTP Client uses RestTemplate.
+2026-04-25T19:14:44.128Z  WARN 1 --- [           main] iguration$LoadBalancerCaffeineWarnLogger : Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2026-04-25T19:14:44.774Z  INFO 1 --- [           main] o.s.c.n.eureka.InstanceInfoFactory       : Setting initial instance status as: STARTING
+2026-04-25T19:14:45.412Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Initializing Eureka in region us-east-1
+2026-04-25T19:14:45.476Z  INFO 1 --- [           main] c.n.d.s.r.aws.ConfigClusterResolver      : Resolving eureka endpoints via configuration
+2026-04-25T19:14:45.727Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Disable delta property : false
+2026-04-25T19:14:45.729Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Single vip registry refresh property : null
+2026-04-25T19:14:45.737Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Force full registry fetch : false
+2026-04-25T19:14:45.738Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Application is null : false
+2026-04-25T19:14:45.738Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Registered Applications size is zero : true
+2026-04-25T19:14:45.739Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Application version is -1: true
+2026-04-25T19:14:45.739Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Getting all instance registry info from the eureka server
+2026-04-25T19:14:47.440Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : The response status is 200
+2026-04-25T19:14:47.449Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Starting heartbeat executor: renew interval is: 30
+2026-04-25T19:14:47.475Z  INFO 1 --- [           main] c.n.discovery.InstanceInfoReplicator     : InstanceInfoReplicator onDemand update allowed rate per min is 4
+2026-04-25T19:14:47.492Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Discovery Client initialized at timestamp 1777144487490 with initial instances count: 0
+2026-04-25T19:14:47.498Z  INFO 1 --- [           main] o.s.c.n.e.s.EurekaServiceRegistry        : Registering application DOCTOR_SERVICE with eureka with status UP
+2026-04-25T19:14:47.500Z  INFO 1 --- [           main] com.netflix.discovery.DiscoveryClient    : Saw local status change event StatusChangeEvent [timestamp=1777144487500, current=UP, previous=STARTING]
+2026-04-25T19:14:47.509Z  INFO 1 --- [nfoReplicator-0] com.netflix.discovery.DiscoveryClient    : DiscoveryClient_DOCTOR_SERVICE/7c602b04cc1b:doctor_service:8083: registering service...
+2026-04-25T19:14:47.827Z  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8083 (http) with context path ''
+2026-04-25T19:14:47.832Z  INFO 1 --- [           main] .s.c.n.e.s.EurekaAutoServiceRegistration : Updating port to 8083
+2026-04-25T19:14:47.912Z  INFO 1 --- [           main] c.h.d.DoctorServiceApplication           : Started DoctorServiceApplication in 44.843 seconds (process running for 47.775)
+========================================
+DOCTOR SERVICE STARTED!
+Port: 8083
+========================================
+2026-04-25T19:14:47.975Z  INFO 1 --- [nfoReplicator-0] com.netflix.discovery.DiscoveryClient    : DiscoveryClient_DOCTOR_SERVICE/7c602b04cc1b:doctor_service:8083 - registration status: 204
+2026-04-25T19:15:17.446Z  INFO 1 --- [freshExecutor-0] com.netflix.discovery.DiscoveryClient    : Disable delta property : false
+2026-04-25T19:15:17.447Z  INFO 1 --- [freshExecutor-0] com.netflix.discovery.DiscoveryClient    : Single vip registry refresh property : null
+2026-04-25T19:15:17.451Z  INFO 1 --- [freshExecutor-0] com.netflix.discovery.DiscoveryClient    : Force full registry fetch : false
+2026-04-25T19:15:17.452Z  INFO 1 --- [freshExecutor-0] com.netflix.discovery.DiscoveryClient    : Application is null : false
+2026-04-25T19:15:17.456Z  INFO 1 --- [freshExecutor-0] com.netflix.discovery.DiscoveryClient    : Registered Applications size is zero : true
+2026-04-25T19:15:17.456Z  INFO 1 --- [freshExecutor-0] com.netflix.discovery.DiscoveryClient    : Application version is -1: false
+2026-04-25T19:15:17.456Z  INFO 1 --- [freshExecutor-0] com.netflix.discovery.DiscoveryClient    : Getting all instance registry info from the eureka server
+2026-04-25T19:15:17.526Z  INFO 1 --- [freshExecutor-0] com.netflix.discovery.DiscoveryClient    : The response status is 200

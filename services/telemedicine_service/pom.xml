@@ -42,6 +42,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Security (JWT validated via auth-service) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
         <!-- WebSocket (STOMP) - For real-time chat -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

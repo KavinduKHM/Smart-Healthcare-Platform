@@ -32,6 +32,13 @@ const HomePage = () => {
             </Link>
           </div>
 
+          <p className="muted" style={{ margin: '0.9rem 0 0' }}>
+            Already have an account?{' '}
+            <Link to="/patient/login">Patient login</Link>,{' '}
+            <Link to="/doctor/login">Doctor login</Link>,{' '}
+            <Link to="/admin/login">Admin login</Link>
+          </p>
+
           <div className="home-hero-notes">
             <span>Fast registration</span>
             <span>Appointment booking</span>

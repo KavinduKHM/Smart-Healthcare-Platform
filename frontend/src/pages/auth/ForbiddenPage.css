@@ -1,0 +1,57 @@
+.forbiddenRoot {
+  display: grid;
+  place-items: center;
+  padding: 2rem 0 1rem;
+}
+
+.forbiddenCard {
+  width: min(640px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+}
+
+.forbiddenTitle {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  letter-spacing: -0.03em;
+}
+
+.forbiddenSubtitle {
+  margin: 0.7rem 0 0;
+  line-height: 1.6;
+}
+
+.forbiddenActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+}
+
+.forbiddenButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(26, 163, 154, 0.45);
+  background: rgba(26, 163, 154, 0.12);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 850;
+}
+
+.forbiddenButton.secondary {
+  border-color: rgba(219, 233, 234, 0.95);
+  background: rgba(238, 247, 247, 0.7);
+}
+
+.forbiddenHelp {
+  margin-top: 1.1rem;
+  border-top: 1px solid rgba(219, 233, 234, 0.75);
+  padding-top: 0.9rem;
+}

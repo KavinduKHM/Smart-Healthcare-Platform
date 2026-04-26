@@ -29,11 +29,12 @@ public class RegisterRequest {
 
     private String phoneNumber;
     private String role;
+    private String specialty;
 
     public RegisterRequest() {
     }
 
-    public RegisterRequest(String username, String email, String password, String firstName, String lastName, String phoneNumber, String role) {
+    public RegisterRequest(String username, String email, String password, String firstName, String lastName, String phoneNumber, String role, String specialty) {
         this.username = username;
         this.email = email;
         this.password = password;
@@ -41,6 +42,7 @@ public class RegisterRequest {
         this.lastName = lastName;
         this.phoneNumber = phoneNumber;
         this.role = role;
+        this.specialty = specialty;
     }
 
     public String getUsername() { return username; }
@@ -63,4 +65,7 @@ public class RegisterRequest {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public String getSpecialty() { return specialty; }
+    public void setSpecialty(String specialty) { this.specialty = specialty; }
 }

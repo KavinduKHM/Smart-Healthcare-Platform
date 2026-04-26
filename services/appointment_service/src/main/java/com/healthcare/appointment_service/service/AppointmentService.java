@@ -406,6 +406,42 @@ public class AppointmentService {
         return buildResponse(appointment, patient, doctor);
     }
 
+    @Transactional
+    public AppointmentResponse createPaymentIntentForAppointment(Long appointmentId) {
+        log.info("Creating payment intent for existing appointment: {}", appointmentId);
+
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found: " + appointmentId));
+
+        if (appointment.getStatus() != AppointmentStatus.PENDING_PAYMENT) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment can only be created for pending-payment appointments");
+        }
+
+        PatientDTO patient;
+        try {
+            patient = patientServiceClient.getPatientById(appointment.getPatientId());
+        } catch (Exception e) {
+            log.warn("Patient service unavailable while creating payment intent for appointment {}", appointmentId);
+            patient = new PatientDTO();
+            patient.setId(appointment.getPatientId());
+            patient.setFirstName("Patient");
+            patient.setLastName(String.valueOf(appointment.getPatientId()));
+        }
+
+        DoctorDTO doctor;
+        try {
+            doctor = doctorServiceClient.getDoctorById(appointment.getDoctorId());
+        } catch (Exception e) {
+            log.warn("Doctor service unavailable while creating payment intent for appointment {}", appointmentId);
+            doctor = new DoctorDTO();
+            doctor.setId(appointment.getDoctorId());
+            doctor.setFirstName("Dr.");
+            doctor.setLastName(String.valueOf(appointment.getDoctorId()));
+        }
+
+        return createOrUpdatePaymentIntent(appointment, patient, doctor);
+    }
+
     private void sendAppointmentNotification(Appointment appointment, PatientDTO patient, DoctorDTO doctor, String eventType) {
         try {
             NotificationAppointmentDTO dto = new NotificationAppointmentDTO();
@@ -844,6 +880,8 @@ public class AppointmentService {
                 .notes(appointment.getNotes())
                 .consultationLink(appointment.getConsultationLink())
                 .prescriptionIssued(appointment.isPrescriptionIssued())
+                .paymentIntentId(appointment.getPaymentIntentId())
+                .paymentStatus(appointment.getPaymentStatus())
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt());
 

@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, NavLink, Outlet, useParams } from 'react-router-dom';
-import { getDoctorProfile } from '../../services/doctorService';
+import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { getDoctorProfile, getDoctorProfileByUserId } from '../../services/doctorService';
 
 const DoctorShell = () => {
   const { doctorId } = useParams();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [resolvedDoctorId, setResolvedDoctorId] = useState(null);
 
   const doctorIdNum = useMemo(() => Number(doctorId), [doctorId]);
 
@@ -37,11 +39,22 @@ const DoctorShell = () => {
         const res = await getDoctorProfile(doctorIdNum);
         if (!isMounted) return;
         setProfile(res.data);
+        setResolvedDoctorId(Number(res?.data?.id) || doctorIdNum);
       } catch (err) {
-        console.error(err);
-        if (!isMounted) return;
-        const status = err?.response?.status;
-        setLoadError(status === 404 ? 'Doctor not found' : 'Failed to load doctor data');
+        try {
+          // Fallback: URL may contain auth userId instead of doctor profile id.
+          const byUserRes = await getDoctorProfileByUserId(doctorIdNum);
+          if (!isMounted) return;
+          const data = byUserRes?.data;
+          const canonicalDoctorId = Number(data?.id);
+          setProfile(data);
+          setResolvedDoctorId(Number.isFinite(canonicalDoctorId) && canonicalDoctorId > 0 ? canonicalDoctorId : doctorIdNum);
+        } catch (fallbackErr) {
+          console.error(fallbackErr);
+          if (!isMounted) return;
+          const status = fallbackErr?.response?.status || err?.response?.status;
+          setLoadError(status === 404 ? 'Doctor not found' : 'Failed to load doctor data');
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -55,21 +68,38 @@ const DoctorShell = () => {
   }, [doctorIdNum]);
 
   useEffect(() => {
+    if (!Number.isFinite(resolvedDoctorId) || resolvedDoctorId <= 0) return;
+    if (resolvedDoctorId === doctorIdNum) return;
+
+    // Normalize route to canonical doctor profile id.
+    navigate(`/doctor/${encodeURIComponent(resolvedDoctorId)}/appointments`, { replace: true });
+  }, [resolvedDoctorId, doctorIdNum, navigate]);
+
+  useEffect(() => {
     const name = String(doctorDisplayName || '').trim();
     if (name) {
       localStorage.setItem('elixra.userName', name);
       localStorage.setItem('elixra.userRole', 'Doctor');
     }
 
-    if (Number.isFinite(doctorIdNum) && doctorIdNum > 0) {
-      localStorage.setItem('doctorId', String(doctorIdNum));
-      localStorage.setItem('elixra.doctorId', String(doctorIdNum));
+    const effectiveDoctorId = Number.isFinite(resolvedDoctorId) && resolvedDoctorId > 0
+      ? resolvedDoctorId
+      : doctorIdNum;
+
+    if (Number.isFinite(effectiveDoctorId) && effectiveDoctorId > 0) {
+      localStorage.setItem('doctorId', String(effectiveDoctorId));
+      localStorage.setItem('elixra.doctorId', String(effectiveDoctorId));
     }
-  }, [doctorDisplayName, doctorIdNum]);
+  }, [doctorDisplayName, doctorIdNum, resolvedDoctorId]);
+
+  const effectiveDoctorId = useMemo(() => {
+    if (Number.isFinite(resolvedDoctorId) && resolvedDoctorId > 0) return resolvedDoctorId;
+    return doctorIdNum;
+  }, [resolvedDoctorId, doctorIdNum]);
 
   const outletContext = useMemo(
-    () => ({ doctorId: doctorIdNum, profile, setProfile }),
-    [doctorIdNum, profile]
+    () => ({ doctorId: effectiveDoctorId, profile, setProfile }),
+    [effectiveDoctorId, profile]
   );
 
   return (
@@ -77,7 +107,7 @@ const DoctorShell = () => {
       <aside className="sidebar">
         <div>
           <h3 className="sidebarTitle">{doctorDisplayName}</h3>
-          <div className="sidebarMeta">ID: {doctorId}</div>
+          <div className="sidebarMeta">ID: {effectiveDoctorId || doctorId}</div>
         </div>
         <nav className="sidebarNav">
           <NavLink

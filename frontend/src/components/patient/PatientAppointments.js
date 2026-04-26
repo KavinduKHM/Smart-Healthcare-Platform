@@ -1,8 +1,9 @@
 // src/components/patient/PatientAppointments.js
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { getUpcomingAppointmentsForPatient } from '../../services/appointmentService';
+import { createPaymentIntentForAppointment, getUpcomingAppointmentsForPatient } from '../../services/appointmentService';
 import { getDoctorProfile } from '../../services/doctorService';
 import { getSessionsByAppointment } from '../../services/telemedicineService';
+import StripePayment from '../common/StripePayment';
 import SockJS from 'sockjs-client';
 import { Client as StompClient } from '@stomp/stompjs';
 
@@ -20,6 +21,11 @@ const PatientAppointments = ({ patientId }) => {
   const [openReviewAppointmentId, setOpenReviewAppointmentId] = useState(null);
   const [reviewDraftByAppointmentId, setReviewDraftByAppointmentId] = useState({});
   const [submittedReviewByAppointmentId, setSubmittedReviewByAppointmentId] = useState({});
+  const [payTarget, setPayTarget] = useState(null);
+  const [payClientSecret, setPayClientSecret] = useState('');
+  const [payLoading, setPayLoading] = useState(false);
+  const [payLoadingAppointmentId, setPayLoadingAppointmentId] = useState(null);
+  const [payError, setPayError] = useState('');
 
   const stompRef = useRef(null);
   const subscriptionsRef = useRef(new Map());
@@ -49,6 +55,45 @@ const PatientAppointments = ({ patientId }) => {
       isMounted = false;
     };
   }, [patientId]);
+
+  const refreshAppointments = async () => {
+    if (!patientId) return;
+    try {
+      const res = await getUpcomingAppointmentsForPatient(patientId);
+      setAppointments(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handlePayNow = async (apt) => {
+    const appointmentId = Number(apt?.id);
+    if (!Number.isFinite(appointmentId)) return;
+
+    setPayError('');
+    setPayLoadingAppointmentId(appointmentId);
+    setPayLoading(true);
+    try {
+      const res = await createPaymentIntentForAppointment(appointmentId);
+      const data = res?.data || {};
+      const secret = String(data?.clientSecret || '').trim();
+      if (!secret) {
+        setPayError('Unable to initialize payment for this appointment.');
+        return;
+      }
+
+      setPayTarget(apt);
+      setPayClientSecret(secret);
+    } catch (err) {
+      console.error(err);
+      const status = err?.response?.status;
+      const backendMessage = err?.response?.data?.message || err?.response?.data?.error;
+      setPayError(backendMessage || (status ? `Failed to initialize payment (${status})` : 'Failed to initialize payment'));
+    } finally {
+      setPayLoading(false);
+      setPayLoadingAppointmentId(null);
+    }
+  };
 
   // Resolve doctor display names for appointments that only contain IDs / placeholders.
   useEffect(() => {
@@ -340,6 +385,18 @@ const PatientAppointments = ({ patientId }) => {
               </button>
             </div>
           ) : null}
+          {category === 'pending' && String(apt?.status || '').toUpperCase() === 'PENDING_PAYMENT' ? (
+            <div className="apt-action-stack">
+              <button
+                type="button"
+                className="apt-join-btn"
+                onClick={() => handlePayNow(apt)}
+                disabled={payLoading}
+              >
+                {payLoading && Number(payLoadingAppointmentId) === Number(apt?.id) ? 'Preparing payment...' : 'Pay now'}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {category === 'confirmed' && isReviewOpen && !submitted ? (
@@ -394,6 +451,46 @@ const PatientAppointments = ({ patientId }) => {
       {sessionAlert ? (
         <div className="apt-session-alert" role="alert">
           <strong>Video session update:</strong> {sessionAlert.message}
+        </div>
+      ) : null}
+
+      {payError ? (
+        <p className="appointments-error">{payError}</p>
+      ) : null}
+
+      {payTarget && payClientSecret ? (
+        <div className="quick-booking-payment" style={{ marginBottom: '1rem' }}>
+          <h4>Complete Payment</h4>
+          <p>Appointment ID: {payTarget.id}</p>
+          <StripePayment
+            appointmentId={payTarget.id}
+            amount={'Amount due'}
+            clientSecret={payClientSecret}
+            onSuccess={async () => {
+              setSessionAlert({
+                appointmentId: payTarget.id,
+                message: 'Payment successful. Appointment confirmed.',
+              });
+              setPayTarget(null);
+              setPayClientSecret('');
+              setPayError('');
+              await refreshAppointments();
+            }}
+            onError={(err) => {
+              setPayError(`Payment failed: ${err}`);
+            }}
+          />
+          <button
+            type="button"
+            className="apt-review-secondary"
+            style={{ marginTop: '0.75rem' }}
+            onClick={() => {
+              setPayTarget(null);
+              setPayClientSecret('');
+            }}
+          >
+            Cancel
+          </button>
         </div>
       ) : null}
 

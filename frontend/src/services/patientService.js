@@ -52,6 +52,9 @@ const toProfileUpdateRequest = (data) => {
 export const getPatientProfile = (patientId) => 
   PATIENT_API.get(`/${patientId}/profile`);
 
+export const getPatientProfileByUserId = (userId) =>
+  PATIENT_API.get(`/user/${userId}`);
+
 export const updatePatientProfile = (patientId, data) => 
   PATIENT_API.put(`/${patientId}/profile`, toProfileUpdateRequest(data));
 

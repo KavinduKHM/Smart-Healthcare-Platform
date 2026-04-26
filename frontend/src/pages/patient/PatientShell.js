@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import {
   getPatientProfile,
+  getPatientProfileByUserId,
   getPatientDocuments,
   getPatientPrescriptions,
   getPatientMedicalHistory,
@@ -33,8 +34,7 @@ const normalizeImageUrl = (value) => {
   return text.startsWith('/') ? `${API_BASE_URL}${text}` : `${API_BASE_URL}/${text}`;
 };
 
-const getFallbackProfileImage = (patientId) =>
-  patientId ? `${API_BASE_URL}/api/patients/${patientId}/profile-picture` : '';
+const getFallbackProfileImage = () => '';
 
 const resolveProfileImage = (profile, patientId) => {
   for (const key of PROFILE_IMAGE_CANDIDATE_KEYS) {
@@ -65,11 +65,12 @@ const PatientShell = () => {
   const [documents, setDocuments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [medicalHistory, setMedicalHistory] = useState([]);
+  const [resolvedPatientId, setResolvedPatientId] = useState(null);
 
   const patientIdNum = useMemo(() => Number(patientId), [patientId]);
   const patientName = useMemo(() => getPatientDisplayName(profile), [profile]);
   const patientImage = useMemo(() => resolveProfileImage(profile, patientIdNum), [profile, patientIdNum]);
-  const fallbackPatientImage = useMemo(() => getFallbackProfileImage(patientIdNum), [patientIdNum]);
+  const fallbackPatientImage = useMemo(() => getFallbackProfileImage(), []);
 
   useEffect(() => {
     setSidebarImageSrc(patientImage || '');
@@ -83,21 +84,30 @@ const PatientShell = () => {
       localStorage.setItem('elixra.userRole', 'Patient');
     }
 
-    if (Number.isFinite(patientIdNum) && patientIdNum > 0) {
-      localStorage.setItem('patientId', String(patientIdNum));
-      localStorage.setItem('elixra.patientId', String(patientIdNum));
+    const effectivePatientId = Number.isFinite(resolvedPatientId) && resolvedPatientId > 0
+      ? resolvedPatientId
+      : patientIdNum;
+
+    if (Number.isFinite(effectivePatientId) && effectivePatientId > 0) {
+      localStorage.setItem('patientId', String(effectivePatientId));
+      localStorage.setItem('elixra.patientId', String(effectivePatientId));
     }
-  }, [patientName, patientIdNum]);
+  }, [patientName, patientIdNum, resolvedPatientId]);
+
+  const effectivePatientId = useMemo(() => {
+    if (Number.isFinite(resolvedPatientId) && resolvedPatientId > 0) return resolvedPatientId;
+    return patientIdNum;
+  }, [resolvedPatientId, patientIdNum]);
 
   const refreshDocuments = useCallback(async () => {
-    const docsRes = await getPatientDocuments(patientIdNum);
+    const docsRes = await getPatientDocuments(effectivePatientId);
     setDocuments(Array.isArray(docsRes.data) ? docsRes.data : []);
-  }, [patientIdNum]);
+  }, [effectivePatientId]);
 
   const refreshMedicalHistory = useCallback(async () => {
-    const historyRes = await getPatientMedicalHistory(patientIdNum);
+    const historyRes = await getPatientMedicalHistory(effectivePatientId);
     setMedicalHistory(Array.isArray(historyRes.data) ? historyRes.data : []);
-  }, [patientIdNum]);
+  }, [effectivePatientId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -113,15 +123,29 @@ const PatientShell = () => {
       setLoadError(null);
 
       try {
-        const [profileRes, docsRes, prescRes, histRes] = await Promise.all([
-          getPatientProfile(patientIdNum),
-          getPatientDocuments(patientIdNum),
-          getPatientPrescriptions(patientIdNum),
-          getPatientMedicalHistory(patientIdNum),
+        let canonicalPatientId = patientIdNum;
+        let profileData;
+
+        try {
+          const profileRes = await getPatientProfile(patientIdNum);
+          profileData = profileRes.data;
+          canonicalPatientId = Number(profileRes?.data?.id) || patientIdNum;
+        } catch (profileByIdErr) {
+          // Fallback: route param may be auth userId instead of patient profile id.
+          const profileByUserRes = await getPatientProfileByUserId(patientIdNum);
+          profileData = profileByUserRes.data;
+          canonicalPatientId = Number(profileByUserRes?.data?.id) || patientIdNum;
+        }
+
+        const [docsRes, prescRes, histRes] = await Promise.all([
+          getPatientDocuments(canonicalPatientId),
+          getPatientPrescriptions(canonicalPatientId),
+          getPatientMedicalHistory(canonicalPatientId),
         ]);
 
         if (!isMounted) return;
-        setProfile(profileRes.data);
+        setProfile(profileData);
+        setResolvedPatientId(canonicalPatientId);
         setDocuments(Array.isArray(docsRes.data) ? docsRes.data : []);
         setPrescriptions(Array.isArray(prescRes.data) ? prescRes.data : []);
         setMedicalHistory(Array.isArray(histRes.data) ? histRes.data : []);
@@ -142,9 +166,17 @@ const PatientShell = () => {
     };
   }, [patientIdNum]);
 
+  useEffect(() => {
+    if (!Number.isFinite(resolvedPatientId) || resolvedPatientId <= 0) return;
+    if (resolvedPatientId === patientIdNum) return;
+
+    // Normalize route to canonical patient profile id.
+    navigate(`/patient/${encodeURIComponent(resolvedPatientId)}/appointments`, { replace: true });
+  }, [resolvedPatientId, patientIdNum, navigate]);
+
   const outletContext = useMemo(
     () => ({
-      patientId: patientIdNum,
+      patientId: effectivePatientId,
       profile,
       setProfile,
       documents,
@@ -155,7 +187,7 @@ const PatientShell = () => {
       refreshDocuments,
       refreshMedicalHistory,
     }),
-    [patientIdNum, profile, documents, prescriptions, medicalHistory, refreshDocuments, refreshMedicalHistory]
+    [effectivePatientId, profile, documents, prescriptions, medicalHistory, refreshDocuments, refreshMedicalHistory]
   );
 
   const handleLogoutClick = (event) => {
@@ -207,7 +239,7 @@ const PatientShell = () => {
             </div>
             <div>
               <h3 className="sidebarTitle">{patientName}</h3>
-              <div className="sidebarMeta">Patient Profile • ID: {patientId}</div>
+              <div className="sidebarMeta">Patient Profile • ID: {effectivePatientId || patientId}</div>
             </div>
           </div>
         </div>

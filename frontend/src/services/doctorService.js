@@ -17,6 +17,9 @@ export const rejectDoctor = (doctorId) =>
 export const getDoctorProfile = (doctorId) => 
   DOCTOR_API.get(`/${doctorId}`);
 
+export const getDoctorProfileByUserId = (userId) =>
+  DOCTOR_API.get(`/user/${userId}`);
+
 export const updateDoctorProfile = (doctorId, data) => 
   DOCTOR_API.put(`/${doctorId}/profile`, data);
 
