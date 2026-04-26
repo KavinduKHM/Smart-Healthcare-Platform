@@ -43,7 +43,15 @@ const VideoCallComponent = () => {
             setIsLoading(true);
             setError(null);
             try {
-                const res = await axios.post(tokenUrl, { channelName, userAccount: uid });
+                const accessToken = localStorage.getItem('accessToken');
+                const res = await axios.post(tokenUrl, 
+                    { channelName, userAccount: uid },
+                    {
+                        headers: {
+                            Authorization: accessToken ? `Bearer ${accessToken}` : ''
+                        }
+                    }
+                );
                 if (!isMounted) return;
                 setToken(res.data?.token ?? null);
                 setAppId(res.data?.appId ?? null);
@@ -160,6 +168,9 @@ const ChatBox = ({ channelName, senderId }) => {
 
         const client = new StompClient({
             webSocketFactory: () => new SockJS(wsUrl),
+            connectHeaders: {
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`
+            },
             reconnectDelay: 1500,
             heartbeatIncoming: 10000,
             heartbeatOutgoing: 10000,

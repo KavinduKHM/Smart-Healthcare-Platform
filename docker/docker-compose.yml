@@ -228,6 +228,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka/
       AUTH_SERVICE_URL: http://auth-service:8081
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     networks:
       - healthcare-network
 

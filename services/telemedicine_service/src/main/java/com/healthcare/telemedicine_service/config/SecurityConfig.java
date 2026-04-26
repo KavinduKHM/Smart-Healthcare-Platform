@@ -14,8 +14,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.time.Duration;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -34,10 +38,17 @@ public class SecurityConfig {
                                                    AuthServiceAuthenticationFilter authFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
+                            // If it's a whitelisted path, don't return 401 even if token check happened and failed
+                            String path = request.getRequestURI();
+                            if (path != null && path.startsWith("/ws")) {
+                                response.setStatus(HttpStatus.OK.value());
+                                return;
+                            }
+
                             String header = request.getHeader(HttpHeaders.AUTHORIZATION);
                             boolean hasBearer = header != null && header.startsWith("Bearer ");
                             boolean invalidToken = Boolean.TRUE.equals(request.getAttribute(AuthServiceAuthenticationFilter.AUTH_TOKEN_INVALID_ATTR));
@@ -48,13 +59,32 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
-
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/video/**").hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
-
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://127.0.0.1:3000",
+                "http://127.0.0.1:3001"
+        ));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
