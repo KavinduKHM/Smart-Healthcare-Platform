@@ -469,16 +469,43 @@ public class AppointmentService {
 
         Appointment saved = appointmentRepository.save(appointment);
 
+        // Fetch doctor details (best-effort) to include in the upsert and response
+        DoctorDTO doctor;
+        try {
+            doctor = doctorServiceClient.getDoctorById(saved.getDoctorId());
+        } catch (Exception e) {
+            log.warn("Doctor service unavailable while preparing review upsert for appointment {}: {}",
+                    saved.getId(), e.getMessage());
+            doctor = new DoctorDTO();
+            doctor.setId(saved.getDoctorId());
+            doctor.setFirstName("Dr.");
+            doctor.setLastName(String.valueOf(saved.getDoctorId()));
+            doctor.setSpecialty("General Medicine");
+        }
+
+        // Best-effort sync into patient-service DB so patient can view their reviews
+        try {
+            ReviewUpsertRequest upsert = ReviewUpsertRequest.builder()
+                    .patientId(saved.getPatientId())
+                    .doctorId(saved.getDoctorId())
+                    .doctorName(doctor.getFullName())
+                    .doctorSpecialty(doctor.getSpecialty())
+                    .appointmentId(saved.getId())
+                    .rating(saved.getRating())
+                    .reviewText(saved.getReviewText())
+                    .reviewCreatedAt(saved.getReviewCreatedAt())
+                    .build();
+
+            patientServiceClient.upsertReview(upsert);
+        } catch (Exception e) {
+            log.warn("Failed to sync review to patient-service (patientId={}, appointmentId={}): {}",
+                    saved.getPatientId(), saved.getId(), e.toString());
+        }
+
         PatientDTO patient = new PatientDTO();
         patient.setId(saved.getPatientId());
         patient.setFirstName("Patient");
         patient.setLastName(String.valueOf(saved.getPatientId()));
-
-        DoctorDTO doctor = new DoctorDTO();
-        doctor.setId(saved.getDoctorId());
-        doctor.setFirstName("Dr.");
-        doctor.setLastName(String.valueOf(saved.getDoctorId()));
-        doctor.setSpecialty("General Medicine");
 
         return buildResponse(saved, patient, doctor);
     }

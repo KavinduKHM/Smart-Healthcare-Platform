@@ -172,16 +172,7 @@ const LoginPage = ({ portal: portalProp }) => {
         </div>
       </section>
 
-      <aside className="loginAside" aria-hidden="true">
-        <div className="loginAsideCard">
-          <h2>How access works</h2>
-          <ul>
-            <li><strong>401</strong> means you’re not logged in (or token is invalid).</li>
-            <li><strong>403</strong> means you’re logged in, but your role is not allowed.</li>
-          </ul>
-          <p className="muted">Use the role links above to test each portal.</p>
-        </div>
-      </aside>
+      
     </div>
   );
 };
