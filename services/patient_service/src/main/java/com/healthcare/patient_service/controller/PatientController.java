@@ -257,4 +257,11 @@ public ResponseEntity<Void> deleteMedicalHistory(@PathVariable Long historyId) {
         PrescriptionDTO saved = patientService.upsertPrescriptionFromDoctor(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
+
+    @PostMapping("/_internal/reviews")
+    public ResponseEntity<Void> upsertReview(@RequestBody DoctorReviewUpsertRequest request) {
+        // Best-effort: write the review record into patient DB so patients can see their reviews
+        patientService.upsertReviewFromDoctor(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
 }

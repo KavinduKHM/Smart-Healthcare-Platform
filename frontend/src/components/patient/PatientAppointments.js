@@ -333,7 +333,7 @@ const PatientAppointments = ({ patientId }) => {
     const sessionActive = Number.isFinite(apptId) ? Boolean(sessionActiveByAppointmentId?.[apptId]) : false;
     const joinDisabled = category === 'confirmed' ? !sessionActive : false;
 
-    const existingSubmitted = Number.isFinite(apptId) && Number.isFinite(Number(apt?.rating))
+    const existingSubmitted = Number.isFinite(apptId) && Number.isFinite(Number(apt?.rating)) && Number(apt.rating) >= 1 && Number(apt.rating) <= 5
       ? {
           rating: Number(apt.rating),
           review: String(apt?.reviewText || ''),

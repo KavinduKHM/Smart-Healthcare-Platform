@@ -8,6 +8,8 @@ import com.healthcare.patient_service.model.MedicalDocument;
 import com.healthcare.patient_service.model.MedicalHistory;
 import com.healthcare.patient_service.model.Patient;
 import com.healthcare.patient_service.model.Prescription;
+import com.healthcare.patient_service.model.Review;
+import com.healthcare.patient_service.repository.ReviewRepository;
 import com.healthcare.patient_service.repository.MedicalDocumentRepository;
 import com.healthcare.patient_service.repository.MedicalHistoryRepository;
 import com.healthcare.patient_service.repository.PatientRepository;
@@ -30,6 +32,7 @@ public class PatientService {
     private final MedicalDocumentRepository medicalDocumentRepository;
     private final MedicalHistoryRepository medicalHistoryRepository;
     private final PrescriptionRepository prescriptionRepository;
+    private final ReviewRepository reviewRepository;
     private final FileStorageService fileStorageService;
     private final CloudinaryService cloudinaryService;
     
@@ -40,12 +43,14 @@ public class PatientService {
                           MedicalDocumentRepository medicalDocumentRepository,
                           MedicalHistoryRepository medicalHistoryRepository,
                           PrescriptionRepository prescriptionRepository,
+                          ReviewRepository reviewRepository,
                           FileStorageService fileStorageService,
                           CloudinaryService cloudinaryService) {
         this.patientRepository = patientRepository;
         this.medicalDocumentRepository = medicalDocumentRepository;
         this.medicalHistoryRepository = medicalHistoryRepository;
         this.prescriptionRepository = prescriptionRepository;
+        this.reviewRepository = reviewRepository;
         this.fileStorageService = fileStorageService;
         this.cloudinaryService = cloudinaryService;
     }
@@ -828,6 +833,43 @@ private MedicalHistoryDTO mapToMedicalHistoryDTO(MedicalHistory history) {
             .documentDate(document.getDocumentDate())
             .verified(document.isVerified())
             .build();
+    }
+
+    // ==================== REVIEW SYNC FROM APPOINTMENT SERVICE ====================
+
+    @Transactional
+    public void upsertReviewFromDoctor(com.healthcare.patient_service.dto.DoctorReviewUpsertRequest request) {
+        if (request == null) return;
+        if (request.getPatientId() == null) return;
+        if (request.getDoctorId() == null) return;
+
+        Patient patient = patientRepository.findById(request.getPatientId())
+                .orElseThrow(() -> new PatientNotFoundException(request.getPatientId()));
+
+        // Try to find existing review by appointment to keep idempotent
+        com.healthcare.patient_service.model.Review review = null;
+        if (request.getAppointmentId() != null) {
+            List<com.healthcare.patient_service.model.Review> existing =
+                    reviewRepository.findByPatientId(request.getPatientId()).stream()
+                            .filter(r -> request.getAppointmentId().equals(r.getAppointmentId()))
+                            .toList();
+            if (!existing.isEmpty()) review = existing.get(0);
+        }
+
+        if (review == null) {
+            review = com.healthcare.patient_service.model.Review.builder().build();
+            review.setPatient(patient);
+        }
+
+        review.setDoctorId(request.getDoctorId());
+        review.setDoctorName(request.getDoctorName());
+        review.setDoctorSpecialty(request.getDoctorSpecialty());
+        review.setAppointmentId(request.getAppointmentId());
+        review.setRating(request.getRating());
+        review.setReviewText(request.getReviewText());
+        review.setReviewCreatedAt(request.getReviewCreatedAt() != null ? request.getReviewCreatedAt() : java.time.LocalDateTime.now());
+
+        reviewRepository.save(review);
     }
 
     // ==================== PRESCRIPTION SYNC (INTERNAL) ====================

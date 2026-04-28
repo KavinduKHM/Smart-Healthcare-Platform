@@ -23,4 +23,10 @@ public class PatientServiceClientFallback implements PatientServiceClient {
         mockPatient.setEmail("mock@patient.com");
         return mockPatient;
     }
+
+    @Override
+    public void upsertReview(com.healthcare.appointment_service.dto.ReviewUpsertRequest request) {
+        log.warn("Patient Service unavailable. Skipping upsertReview for appointmentId={}",
+                request != null ? request.getAppointmentId() : null);
+    }
 }
