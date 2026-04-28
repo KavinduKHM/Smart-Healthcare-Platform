@@ -10,8 +10,18 @@ export const searchDoctors = (specialty, date) =>
     },
   });
 
-export const getAvailableSlots = (doctorId, date = '2026-04-20T00:00:00') => 
-  APPOINTMENT_API.get(`/doctors/${doctorId}/slots?date=${date}`);
+export const getAvailableSlots = (doctorId, date) => {
+  // Default to today's date at start of day if no date provided
+  const formatDate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}T00:00:00`;
+  };
+
+  const dateParam = date || formatDate(new Date());
+  return APPOINTMENT_API.get(`/doctors/${doctorId}/slots?date=${encodeURIComponent(dateParam)}`);
+};
 
 export const bookAppointment = (appointmentData) => 
   APPOINTMENT_API.post('', appointmentData);

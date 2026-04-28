@@ -1,0 +1,88 @@
+.doctors-showcase-page {
+  padding: 1.25rem 0;
+}
+.doctors-showcase-head {
+  margin-bottom: 1rem;
+}
+.doctors-tabs { display:flex; gap:1rem; }
+.doctors-tab-list { display:flex; flex-direction:column; width:260px; max-height:72vh; overflow:auto; }
+.doctors-tab { text-align:left; padding:0.8rem; border-radius:8px; border:1px solid transparent; background:transparent; margin-bottom:0.5rem; cursor:pointer; }
+.doctors-tab:hover { background: #f6fdfb; border-color:#e2f4f2 }
+.doctors-tab--active { background:#e9fffb; border-color:#cfeee8; box-shadow: inset 0 0 0 1px rgba(13,158,150,0.03); }
+.doctors-tab-name { font-weight:700; color:#0d5f5a }
+.doctors-tab-meta { font-size:0.85rem; color:#667; }
+
+.doctors-tab-content { flex:1; }
+.doctor-details { background:#fff; padding:1rem; border-radius:8px; border:1px solid #eef7f6 }
+.doctor-main { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start }
+.doctor-specialty { color:#0d7a73; font-weight:700; margin-top:0.25rem }
+.doctor-quals { color:#5f8a88; margin-top:0.5rem }
+.doctor-bio { margin-top:0.7rem; color:#4f6564 }
+.doctor-contact { margin-top:0.6rem; color:#6b8d8b }
+
+.doctor-emails { margin-top:0.45rem; color:#2f5856; font-size:0.95rem }
+.doctor-fee { margin-top:0.4rem; color:#0d5f5a; font-weight:700 }
+
+.doctor-slots { margin-top:1rem }
+.slots-grid { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem }
+.slot-pill { background:#f0fefa; border:1px solid #cfeae8; padding:0.45rem 0.7rem; border-radius:6px; cursor:pointer }
+
+.booking-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(5px);
+  z-index: 1200;
+}
+.booking-modal {
+  background: #fff;
+  padding: 1.1rem;
+  border-radius: 10px;
+  width: 540px;
+  max-width: calc(100% - 32px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+}
+.booking-form label { display:block; margin-top:0.6rem; font-weight:600 }
+.booking-form input, .booking-form textarea { width:100%; padding:0.55rem; border-radius:6px; border:1px solid #e6f2f1; margin-top:0.25rem }
+.doctors-showcase-page {
+  padding: 1.5rem 0;
+}
+.doctors-showcase-head h1 { margin: 0 0 0.25rem 0; }
+.doctor-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem;
+  border: 1px solid #eef6f5;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+.doctor-card-left { display:flex; flex-direction:column; }
+.doctor-name { font-weight:700; color:#0d5f5a; }
+.doctor-meta { font-size:0.9rem; color:#567; }
+.doctor-slots { margin-top:0.6rem; }
+.slots-grid { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem; }
+.slot-pill { padding:0.45rem 0.7rem; border-radius:6px; border:1px solid #dfeeea; background:#fff; cursor:pointer; }
+.booking-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+}
+.booking-modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.25rem;
+  width: 720px;
+  max-width: calc(100% - 2rem);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+}
+.booking-form input, .booking-form textarea { width: 100%; padding: 0.5rem; margin-top: 0.25rem; border:1px solid #e6efee; border-radius:6px; }
+.booking-form label { font-weight:600; font-size:0.9rem; margin-top:0.6rem; display:block; }

@@ -17,7 +17,11 @@ const PROFILE_IMAGE_CANDIDATE_KEYS = [
   'photoUrl',
 ];
 
-const API_BASE_URL = (process.env.REACT_APP_API_URL || 'http://localhost:8082').replace(/\/$/, '');
+const _rawApiBase = process.env.REACT_APP_API_URL || 'http://localhost:8082';
+let API_BASE_URL = _rawApiBase;
+if (API_BASE_URL.startsWith(':')) API_BASE_URL = `http://localhost${API_BASE_URL}`;
+else if (!/^https?:\/\//i.test(API_BASE_URL)) API_BASE_URL = `http://${API_BASE_URL}`;
+API_BASE_URL = API_BASE_URL.replace(/\/$/, '');
 
 const isValidImageValue = (value) => {
   if (value === null || value === undefined) return false;
@@ -272,7 +276,7 @@ const PatientShell = () => {
         </nav>
         <div className="patient-sidebar-foot">
           <Link
-            to="appointments"
+            to="/doctors"
             className="patient-switch-link patient-sidebar-cta"
             aria-label="Book appointment"
           >

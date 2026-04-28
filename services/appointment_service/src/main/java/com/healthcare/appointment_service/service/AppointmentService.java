@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.DataIntegrityViolationException;
 import com.healthcare.appointment_service.client.PaymentServiceClient;
 import com.healthcare.appointment_service.dto.PaymentRequest;
 import com.healthcare.appointment_service.dto.PaymentResponse;
@@ -275,7 +276,13 @@ public class AppointmentService {
                 .notes(request.getNotes())
                 .build();
 
-        Appointment savedAppointment = appointmentRepository.save(appointment);
+        Appointment savedAppointment;
+        try {
+            savedAppointment = appointmentRepository.save(appointment);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Appointment slot already taken for doctor {} at {}", request.getDoctorId(), request.getAppointmentTime());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Time slot is already booked");
+        }
         log.info("Appointment created with ID: {} (status: PENDING_PAYMENT)", savedAppointment.getId());
 
         AppointmentResponse response = createOrUpdatePaymentIntent(savedAppointment, patient, doctor);
@@ -319,6 +326,28 @@ public class AppointmentService {
         PaymentResponse paymentResponse;
         try {
             paymentResponse = paymentServiceClient.createPaymentIntent(paymentReq);
+        } catch (FeignException.BadRequest e) {
+            String body = null;
+            try {
+                body = e.content() != null ? new String(e.content(), java.nio.charset.StandardCharsets.UTF_8) : e.getMessage();
+            } catch (Exception ex) {
+                body = e.getMessage();
+            }
+            String userMsg = body;
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                @SuppressWarnings("unchecked")
+                java.util.Map<String, Object> map = mapper.readValue(body, java.util.Map.class);
+                if (map.get("message") != null) userMsg = String.valueOf(map.get("message"));
+                else if (map.get("error") != null) userMsg = String.valueOf(map.get("error"));
+            } catch (Exception ex) {
+                // ignore parse errors, keep raw body
+            }
+            log.warn("Payment service rejected request: {}", userMsg);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, userMsg);
+        } catch (FeignException e) {
+            log.error("Payment service call failed with status {}", e.status(), e);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Payment service unavailable");
         } catch (Exception e) {
             log.error("Failed to create payment intent", e);
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Payment service unavailable");

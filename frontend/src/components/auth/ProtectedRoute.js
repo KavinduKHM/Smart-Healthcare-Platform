@@ -26,6 +26,43 @@ const ProtectedRoute = ({ allowedRoles, children }) => {
     const isAllowed = required.includes(currentRole);
 
     if (!isAllowed) {
+      // Fallback: if the required role includes PATIENT and the stored role
+      // is missing/doesn't match, allow access when the user is logged in and
+      // the requested patient id matches the authenticated patient id stored
+      // in localStorage. This helps when role hasn't been written yet but
+      // the session clearly belongs to the same patient.
+      let fallbackAllowed = false;
+      try {
+        if (required.includes('PATIENT') && isLoggedIn()) {
+          const m = String(next || '').match(/^\/patient\/([^\/]+)/);
+          const targetId = m && m[1] ? decodeURIComponent(m[1]) : null;
+          const storedPid = localStorage.getItem('elixra.patientId') || localStorage.getItem('patientId') || '';
+          if (targetId && storedPid && String(targetId) === String(storedPid)) {
+            fallbackAllowed = true;
+          }
+        }
+      } catch (e) {
+        fallbackAllowed = false;
+      }
+
+      if (fallbackAllowed) {
+        return children;
+      }
+      try {
+        // Visible debug: log role mismatch and relevant localStorage keys
+        // eslint-disable-next-line no-console
+        console.log('[ProtectedRoute] access denied ->', {
+          location: next,
+          required,
+          currentRole,
+          isLoggedIn: isLoggedIn(),
+          storedRoleRaw: localStorage.getItem('elixra.userRole'),
+          accessToken: localStorage.getItem('accessToken') ? 'present' : 'missing',
+          allKeys: Object.keys(localStorage).slice(0, 50),
+        });
+      } catch (e) {
+        // ignore logging errors
+      }
       return <Navigate to={`/forbidden?from=${encodeURIComponent(next)}`} replace />;
     }
   }

@@ -2,6 +2,7 @@ import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import AvailabilityManager from '../../components/doctor/AvailabilityManager';
 import AppointmentRequests from '../../components/doctor/AppointmentRequests';
+import ConfirmedAppointments from '../../components/doctor/ConfirmedAppointments';
 import VideoConsultation from '../../components/doctor/VideoConsultation';
 import './DoctorAppointmentsPage.css';
 
@@ -23,6 +24,7 @@ const DoctorAppointmentsPage = () => {
         <section className="doctor-appointments-main">
           <AvailabilityManager doctorId={doctorId} isVerified={isVerified} />
           <AppointmentRequests doctorId={doctorId} />
+          <ConfirmedAppointments doctorId={doctorId} />
         </section>
         <aside className="doctor-appointments-side">
           <VideoConsultation doctorId={doctorId} />

@@ -1,7 +1,11 @@
 // src/services/patientService.js
 import { PATIENT_API, PATIENT_UPLOAD_API } from './api';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8082';
+const _rawApiBase = process.env.REACT_APP_API_URL || 'http://localhost:8082';
+let API_BASE_URL = _rawApiBase;
+if (API_BASE_URL.startsWith(':')) API_BASE_URL = `http://localhost${API_BASE_URL}`;
+else if (!/^https?:\/\//i.test(API_BASE_URL)) API_BASE_URL = `http://${API_BASE_URL}`;
+API_BASE_URL = API_BASE_URL.replace(/\/$/, '');
 
 const PROFILE_UPDATE_FIELDS = [
   'firstName',

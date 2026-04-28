@@ -312,6 +312,30 @@ const PatientAppointments = ({ patientId }) => {
     };
   }, [appointments]);
 
+  const nextAppointment = useMemo(() => {
+    try {
+      const future = (Array.isArray(appointments) ? appointments : []).filter((a) => {
+        if (!a?.appointmentTime) return false;
+        const t = new Date(a.appointmentTime).getTime();
+        return Number.isFinite(t) && t > Date.now();
+      });
+      if (future.length === 0) return null;
+      future.sort((a, b) => new Date(a.appointmentTime) - new Date(b.appointmentTime));
+      return future[0];
+    } catch {
+      return null;
+    }
+  }, [appointments]);
+
+  const timeRemainingLabel = (apt) => {
+    if (!apt?.appointmentTime) return '';
+    const delta = new Date(apt.appointmentTime).getTime() - Date.now();
+    if (!Number.isFinite(delta) || delta <= 0) return 'Due';
+    const days = Math.floor(delta / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((delta % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    return `${String(days).padStart(2, '0')}d : ${String(hours).padStart(2, '0')}h`;
+  };
+
   const joinVideo = (apt) => {
     const channelName = `appointment_${apt.id}`;
     const url = `/video-call/${encodeURIComponent(channelName)}/${encodeURIComponent(patientId)}`;
@@ -506,9 +530,36 @@ const PatientAppointments = ({ patientId }) => {
     );
   };
 
+  const renderTimelineItem = (apt, category) => {
+    const markerText = ((apt?.doctorName || '') + '').trim() || (apt?.doctorId ? String(apt.doctorId) : 'D');
+    const markerInitial = String(markerText).charAt(0).toUpperCase();
+
+    return (
+      <div key={`tl-${apt.id}`} className="timeline-item">
+        <div className="timeline-marker" aria-hidden>
+          <div className="timeline-dot">{markerInitial}</div>
+        </div>
+        <div className="timeline-card">{renderAppointmentCard(apt, category)}</div>
+      </div>
+    );
+  };
+
   return (
     <div className="appointments-board">
       <h2 className="appointments-board-title">Appointments Timeline</h2>
+
+      {nextAppointment ? (
+        <div className="next-appointment-banner" role="region" aria-label="Next appointment">
+          <div className="next-appointment-left">
+            <strong>Next appointment</strong>
+            <div className="next-appointment-doctor">{`Dr. ${((doctorNameById?.[Number(nextAppointment.doctorId)] || nextAppointment.doctorName || '').replace(/^Dr\.\s*/i, ''))} — ${nextAppointment.doctorSpecialty || nextAppointment.specialty || 'General Medicine'}`}</div>
+          </div>
+          <div className="next-appointment-right">
+            <div className="next-appointment-remaining">{timeRemainingLabel(nextAppointment)}</div>
+            <div className="next-appointment-hint">Remaining time</div>
+          </div>
+        </div>
+      ) : null}
 
       {sessionAlert ? (
         <div className="apt-session-alert" role="alert">
@@ -574,8 +625,11 @@ const PatientAppointments = ({ patientId }) => {
       {pending.length > 0 && (
         <div className="appointments-group">
           <h3 className="appointments-group-title appointments-group-title-pending">Pending</h3>
-          <div className="appointments-stack">
-            {pending.map((apt) => renderAppointmentCard(apt, 'pending'))}
+          <div className="appointments-timeline">
+            <div className="timeline-line" aria-hidden />
+            <div className="timeline-items">
+              {pending.map((apt) => renderTimelineItem(apt, 'pending'))}
+            </div>
           </div>
         </div>
       )}
@@ -583,8 +637,11 @@ const PatientAppointments = ({ patientId }) => {
       {confirmed.length > 0 && (
         <div className="appointments-group">
           <h3 className="appointments-group-title appointments-group-title-confirmed">Confirmed</h3>
-          <div className="appointments-stack">
-            {confirmed.map((apt) => renderAppointmentCard(apt, 'confirmed'))}
+          <div className="appointments-timeline">
+            <div className="timeline-line" aria-hidden />
+            <div className="timeline-items">
+              {confirmed.map((apt) => renderTimelineItem(apt, 'confirmed'))}
+            </div>
           </div>
         </div>
       )}
@@ -592,8 +649,11 @@ const PatientAppointments = ({ patientId }) => {
       {completed.length > 0 && (
         <div className="appointments-group">
           <h3 className="appointments-group-title appointments-group-title-other">Completed</h3>
-          <div className="appointments-stack">
-            {completed.map((apt) => renderAppointmentCard(apt, 'completed'))}
+          <div className="appointments-timeline">
+            <div className="timeline-line" aria-hidden />
+            <div className="timeline-items">
+              {completed.map((apt) => renderTimelineItem(apt, 'completed'))}
+            </div>
           </div>
         </div>
       )}
@@ -601,8 +661,11 @@ const PatientAppointments = ({ patientId }) => {
       {other.length > 0 && (
         <div className="appointments-group">
           <h3 className="appointments-group-title appointments-group-title-other">Other</h3>
-          <div className="appointments-stack">
-            {other.map((apt) => renderAppointmentCard(apt, 'other'))}
+          <div className="appointments-timeline">
+            <div className="timeline-line" aria-hidden />
+            <div className="timeline-items">
+              {other.map((apt) => renderTimelineItem(apt, 'other'))}
+            </div>
           </div>
         </div>
       )}

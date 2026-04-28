@@ -63,8 +63,9 @@ public class SecurityConfig {
                                 "/api/doctors/*/reject")
                         .hasRole("ADMIN")
 
-                        // Patient-facing discovery endpoints
+                        // Public discovery & availability endpoints - allow patients and services to query doctors and slots
                         .requestMatchers(HttpMethod.GET,
+                                "/api/doctors",
                                 "/api/doctors/search",
                                 "/api/doctors/verified",
                                 "/api/doctors/specialty/**",
@@ -72,7 +73,7 @@ public class SecurityConfig {
                                 "/api/doctors/*/availability",
                                 "/api/doctors/*/availability/slots",
                                 "/api/doctors/*/check-availability")
-                        .hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
+                        .permitAll()
 
                         // Appointment-service integration endpoints (token forwarded from caller)
                         .requestMatchers(HttpMethod.POST, "/api/doctors/*/book-slot")

@@ -15,9 +15,9 @@
 }
 
 .hc-header-inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(170px, 360px) 1fr minmax(170px, 360px);
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem 0;
 }
@@ -32,16 +32,27 @@
 }
 
 .hc-brand-mark {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0d9e96, #0d5f5a);
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 18px rgba(13, 158, 150, 0.3);
+  justify-content: flex-start;
+  width: auto;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
   flex-shrink: 0;
 }
+
+.hc-logo-img {
+  width: auto;
+  height: 72px; /* reduced to be 20px smaller */
+  max-height: 72px;
+  display: block;
+  border-radius: 0;
+  object-fit: contain;
+}
+.hc-brand-fallback { display: none; }
 
 .hc-brand-text {
   display: grid;
@@ -296,7 +307,7 @@
 /* ── Main ── */
 .hc-main {
   min-height: calc(100vh - 250px);
-  padding: 0;
+  padding: 1.25rem 0; /* small spacing: adds margin after navbar and before footer */
 }
 
 .hc-main .container {

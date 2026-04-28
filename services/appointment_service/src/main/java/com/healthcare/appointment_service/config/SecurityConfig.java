@@ -55,9 +55,9 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                     .requestMatchers("/error").permitAll()
 
-                        // Doctor search/availability - any authenticated user
+                        // Doctor search/availability - make public so patients (and anonymous users) can view listings and slots
                         .requestMatchers(HttpMethod.GET, "/api/appointments/doctors/**")
-                        .hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
+                        .permitAll()
 
                         // Booking & patient flows
                         .requestMatchers(HttpMethod.POST, "/api/appointments")

@@ -1,5 +1,5 @@
 // src/services/doctorService.js
-import { DOCTOR_API } from './api';
+import { DOCTOR_API, DOCTOR_PUBLIC_API } from './api';
 
 // Doctor profile
 export const registerDoctor = (data) =>
@@ -36,6 +36,11 @@ export const deleteAvailability = (doctorId, availabilityId) =>
 // Prescriptions
 export const getDoctorPrescriptions = (doctorId) => 
   DOCTOR_API.get(`/${doctorId}/prescriptions`);
+
+// List all doctors (public listing)
+export const listAllDoctors = (params) =>
+  // Use public verified listing endpoint so patients and anonymous users can fetch listings
+  DOCTOR_PUBLIC_API.get('/verified', { params });
 
 export const issuePrescription = (doctorId, prescriptionData) => 
   DOCTOR_API.post(`/${doctorId}/prescriptions`, prescriptionData);

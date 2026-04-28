@@ -77,11 +77,15 @@ public class AuthServiceAuthenticationFilter extends OncePerRequestFilter {
                 }
                 var roles = Objects.requireNonNullElse(body.getRoles(), Collections.<String>emptySet());
                 var authorities = roles.stream()
-                        .filter(Objects::nonNull)
-                        .map(String::trim)
-                        .filter(s -> !s.isBlank())
-                        .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toList());
+                    .filter(Objects::nonNull)
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .map(r -> {
+                        // Spring Security expects authorities with ROLE_ prefix when using hasRole/hasAnyRole
+                        String role = r.startsWith("ROLE_") ? r : "ROLE_" + r;
+                        return new SimpleGrantedAuthority(role);
+                    })
+                    .collect(Collectors.toList());
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(body.getUsername(), null, authorities);

@@ -3,7 +3,11 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import './PatientRegister.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8082';
+const _rawApiBase = process.env.REACT_APP_API_URL || 'http://localhost:8082';
+let API_BASE_URL = _rawApiBase;
+if (API_BASE_URL.startsWith(':')) API_BASE_URL = `http://localhost${API_BASE_URL}`;
+else if (!/^https?:\/\//i.test(API_BASE_URL)) API_BASE_URL = `http://${API_BASE_URL}`;
+API_BASE_URL = API_BASE_URL.replace(/\/$/, '');
 const MAX_PROFILE_PICTURE_SIZE_MB = 5;
 const MAX_PROFILE_PICTURE_SIZE = MAX_PROFILE_PICTURE_SIZE_MB * 1024 * 1024;
 

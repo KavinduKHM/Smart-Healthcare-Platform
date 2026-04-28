@@ -5,7 +5,6 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { APPOINTMENT_API } from '../../services/api';
 
 const stripePublicKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 const PaymentForm = ({ appointmentId, amount, clientSecret, onSuccess, onError }) => {
   const stripe = useStripe();
@@ -84,12 +83,39 @@ const PaymentForm = ({ appointmentId, amount, clientSecret, onSuccess, onError }
 };
 
 const StripePayment = ({ appointmentId, amount, clientSecret, onSuccess, onError }) => {
-  if (!stripePromise) {
-    return (
-      <p style={{ color: 'red' }}>
-        Stripe publishable key is missing. Set REACT_APP_STRIPE_PUBLISHABLE_KEY in frontend/.env and restart the dev server.
-      </p>
-    );
+  const [stripeClient, setStripeClient] = React.useState(null);
+  const [stripeLoadError, setStripeLoadError] = React.useState('');
+
+  React.useEffect(() => {
+    let mounted = true;
+    if (!stripePublicKey) {
+      setStripeLoadError('Stripe publishable key is missing. Set REACT_APP_STRIPE_PUBLISHABLE_KEY in frontend/.env and restart the dev server.');
+      return () => { mounted = false; };
+    }
+
+    // loadStripe injects the remote Stripe.js script. Catch failures to avoid
+    // an uncaught promise rejection (network/proxy/extension can block it).
+    loadStripe(stripePublicKey)
+      .then((client) => {
+        if (!mounted) return;
+        if (!client) {
+          setStripeLoadError('Failed to initialize Stripe client.');
+        } else {
+          setStripeClient(client);
+        }
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('[Stripe] loadStripe failed:', err);
+        if (!mounted) return;
+        setStripeLoadError('Failed to load Stripe.js. Check network, adblockers, or firewall settings.');
+      });
+
+    return () => { mounted = false; };
+  }, []);
+
+  if (stripeLoadError) {
+    return <p style={{ color: 'red' }}>{stripeLoadError}</p>;
   }
 
   if (!clientSecret) {
@@ -100,8 +126,12 @@ const StripePayment = ({ appointmentId, amount, clientSecret, onSuccess, onError
     );
   }
 
+  if (!stripeClient) {
+    return <p>Loading payment form…</p>;
+  }
+
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripeClient}>
       <PaymentForm
         appointmentId={appointmentId}
         amount={amount}

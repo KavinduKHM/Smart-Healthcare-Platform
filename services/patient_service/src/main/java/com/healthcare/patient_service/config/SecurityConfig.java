@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -62,6 +63,13 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/api/patients/_internal/**")
                         .hasAnyRole("DOCTOR", "ADMIN")
+
+                        // Patients and Doctors can read patient history/documents
+                        .requestMatchers(new AntPathRequestMatcher("/api/patients/*/documents", "GET"))
+                        .hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
+                        .requestMatchers(new AntPathRequestMatcher("/api/patients/*/medical-history/**", "GET"))
+                        .hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
+
                         .requestMatchers("/api/patients/**")
                         .hasAnyRole("PATIENT", "ADMIN")
 

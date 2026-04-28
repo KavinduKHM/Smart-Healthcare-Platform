@@ -34,6 +34,20 @@ const BookAppointment = ({ patientId, profile }) => {
   // Get today's date in YYYY-MM-DD for min attribute
   const today = new Date().toISOString().split('T')[0];
 
+  // If the page was opened via AI quick-book link, read global prefill and set specialty
+  React.useEffect(() => {
+    try {
+      const pre = window.__PREFILL_BOOKING__;
+      if (pre && pre.specialty) {
+        setSpecialty(pre.specialty);
+        // clear so it doesn't persist
+        delete window.__PREFILL_BOOKING__;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   const handleSearch = async () => {
     if (!patientIsActive) {
       showActivationPrompt();

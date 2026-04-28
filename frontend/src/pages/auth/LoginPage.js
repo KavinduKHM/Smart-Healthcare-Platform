@@ -71,7 +71,21 @@ const LoginPage = ({ portal: portalProp }) => {
       const authResponse = await login({ usernameOrEmail, password });
       saveAuthSession(authResponse);
 
-      const storedRole = getStoredRole();
+      // Make sure we have the userId available for safety checks below.
+      const userId = authResponse?.userId;
+
+      // If backend did not provide a role, fall back to the portal the user used
+      // (this is common when the auth service doesn't return roles in the response).
+      let storedRole = getStoredRole();
+      if (!storedRole) {
+        const fallback = portal === 'admin' ? 'ADMIN' : portal === 'doctor' ? 'DOCTOR' : 'PATIENT';
+        try {
+          localStorage.setItem('elixra.userRole', fallback);
+          storedRole = fallback;
+        } catch (e) {
+          // ignore storage errors
+        }
+      }
       if (!isRoleAllowedForPortal(portal, storedRole)) {
         clearAuthSession();
         setError('Your account is not allowed to sign in here.');
@@ -79,9 +93,27 @@ const LoginPage = ({ portal: portalProp }) => {
       }
 
       const next = searchParams.get('next');
-      const safeNext = next && next.startsWith('/') ? next : '';
+      let safeNext = next && next.startsWith('/') ? next : '';
 
-      const userId = authResponse?.userId;
+      // Security: if a patient logs in, avoid honoring a next redirect that points
+      // to another patient's page (would cause backend 403). If `safeNext` points
+      // to `/patient/:id/...` and :id !== current userId, ignore it.
+      if (portal === 'patient' && safeNext) {
+        try {
+          const m = safeNext.match(/^\/patient\/([^\/]+)/);
+          if (m && m[1]) {
+            const targetId = decodeURIComponent(m[1]);
+            const uid = String(userId || '').trim();
+            if (uid && targetId !== uid) {
+              safeNext = '';
+            }
+          }
+        } catch (e) {
+          // ignore parse errors and fall back to default redirect
+          safeNext = '';
+        }
+      }
+      
       const redirectTo = safeNext || getDefaultRedirect(portal, userId);
 
       navigate(redirectTo, {

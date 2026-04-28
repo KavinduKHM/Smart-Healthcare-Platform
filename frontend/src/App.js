@@ -7,6 +7,8 @@ import VideoCallComponent from './components/telemedicine/VideoCall';
 import PatientShell from './pages/patient/PatientShell';
 import PatientRegister from './components/patient/PatientRegister';
 import PatientAppointmentsBookPage from './pages/patient/PatientAppointmentsBookPage';
+import PatientAppointmentsPage from './pages/patient/PatientAppointmentsPage';
+import DoctorShowcasePage from './pages/DoctorShowcasePage';
 import PatientPrescriptionsPage from './pages/patient/PatientPrescriptionsPage';
 import PatientHistoryDocumentsPage from './pages/patient/PatientHistoryDocumentsPage';
 import PatientProfilePage from './pages/patient/PatientProfilePage';
@@ -73,7 +75,7 @@ function App() {
             )}
           >
             <Route index element={<Navigate to="appointments" replace />} />
-            <Route path="appointments" element={<PatientAppointmentsBookPage />} />
+            <Route path="appointments" element={<PatientAppointmentsPage />} />
             <Route path="prescriptions" element={<PatientPrescriptionsPage />} />
             <Route path="history-documents" element={<PatientHistoryDocumentsPage />} />
             <Route path="profile" element={<PatientProfilePage />} />
@@ -106,6 +108,7 @@ function App() {
           </Route>
 
           <Route path="/video-call/:channelName/:userAccount" element={<VideoCallComponent />} />
+          <Route path="/doctors" element={<DoctorShowcasePage />} />
           <Route path="/" element={<HomePage />} />
         </Routes>
       </Layout>
